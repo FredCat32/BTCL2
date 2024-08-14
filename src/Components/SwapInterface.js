@@ -15,6 +15,9 @@ function SwapInterface() {
   return (
     <Box width="100%" maxWidth="400px" margin="auto">
       <VStack spacing={4}>
+        <Text fontSize="xl" fontWeight="bold">
+          Swap
+        </Text>
         <Select
           value={inputToken}
           onChange={(e) => setInputToken(e.target.value)}

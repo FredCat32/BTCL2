@@ -5,6 +5,7 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { ChakraProvider, extendTheme } from "@chakra-ui/react";
 import Navbar from "./Components/NavBar.js"; // Ensure the path is correct
+import theme from "./theme";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
@@ -25,7 +26,6 @@ const customTheme = extendTheme({
 root.render(
   <React.StrictMode>
     <ChakraProvider theme={customTheme}>
-      <Navbar />
       <App />
     </ChakraProvider>
   </React.StrictMode>

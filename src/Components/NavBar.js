@@ -4,112 +4,83 @@ import {
   Flex,
   Link,
   Heading,
-  useColorModeValue,
   IconButton,
   Stack,
-  useTheme,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
 
 const Navbar = () => {
-  const theme = useTheme(); // Access the theme to use theme values programmatically
-
-  const [isOpen, setIsOpen] = React.useState(false);
-  const toggle = () => setIsOpen(!isOpen);
-
-  const bgColor = useColorModeValue(theme.colors.brand.pink);
-  const textColor = useColorModeValue(
-    theme.colors.brand.lightblue,
-    theme.colors.green
-  );
+  const { isOpen, onToggle } = useDisclosure();
 
   return (
-    <div>
-      <Box bg={bgColor} px={4}>
-        <Flex h={16} alignItems={"center"} justifyContent={"space-between"}>
+    <Box backdropFilter="blur(10px)" backgroundColor="rgba(0, 0, 0, 0.3)">
+      <Flex
+        color="white"
+        minH={"60px"}
+        py={{ base: 2 }}
+        px={{ base: 4 }}
+        borderBottom={1}
+        borderStyle={"solid"}
+        borderColor="whiteAlpha.200"
+        align={"center"}
+        maxWidth="container.xl"
+        margin="0 auto"
+      >
+        <Flex
+          flex={{ base: 1, md: "auto" }}
+          ml={{ base: -2 }}
+          display={{ base: "flex", md: "none" }}
+        >
           <IconButton
-            size={"md"}
-            icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
-            aria-label={"Open Menu"}
-            display={{ md: "none" }}
-            onClick={toggle}
+            onClick={onToggle}
+            icon={
+              isOpen ? <CloseIcon w={3} h={3} /> : <HamburgerIcon w={5} h={5} />
+            }
+            variant={"ghost"}
+            aria-label={"Toggle Navigation"}
+            color="white"
           />
-          <Heading as="h1" size="lg" letterSpacing={"tighter"}>
-            BTC L-2
+        </Flex>
+        <Flex flex={{ base: 1 }} justify={{ base: "center", md: "start" }}>
+          <Heading
+            as="h1"
+            size="lg"
+            letterSpacing={"wider"}
+            color="white"
+            textShadow="0 0 10px rgba(255,255,255,0.5)"
+          >
+            Interstellar Swap
           </Heading>
-          <Flex alignItems={"center"}>
-            <Stack
-              direction={"row"}
-              spacing={7}
-              display={{ base: isOpen ? "flex" : "none", md: "flex" }}
-            >
-              <Link
-                px={2}
-                py={1}
-                rounded={"md"}
-                _hover={{
-                  textDecoration: "none",
-                  bg: useColorModeValue("gray.200", "gray.700"),
-                }}
-                href={"#"}
-              >
-                Home
-              </Link>
-              <Link
-                px={2}
-                py={1}
-                rounded={"md"}
-                _hover={{
-                  textDecoration: "none",
-                  bg: useColorModeValue("gray.200", "gray.700"),
-                }}
-                href={"#"}
-              >
-                About
-              </Link>
-              <Link
-                px={2}
-                py={1}
-                rounded={"md"}
-                _hover={{
-                  textDecoration: "none",
-                  bg: useColorModeValue("gray.200", "gray.700"),
-                }}
-                href={"#"}
-              >
-                Services
-              </Link>
-              <Link
-                px={2}
-                py={1}
-                rounded={"md"}
-                _hover={{
-                  textDecoration: "none",
-                  bg: useColorModeValue("gray.200", "gray.700"),
-                }}
-                href={"#"}
-              >
-                Contact
-              </Link>
-            </Stack>
-          </Flex>
         </Flex>
 
-        {isOpen ? (
-          <Box pb={4} display={{ md: "none" }}>
-            <Stack as={"nav"} spacing={4}>
-              <Link href={"#"}>Home</Link>
-              <Link href={"#"}>Layers</Link>
-              <Link href={"#"}>Forum</Link>
-              <Link href={"#"}>Contact</Link>
-            </Stack>
-          </Box>
-        ) : null}
-      </Box>
-      <Box width="100%" height="5vh" bg={bgColor} px={4} color={textColor}>
-        Your Home For BTC L-2 Analytics
-      </Box>
-    </div>
+        <Stack
+          flex={{ base: 1, md: 0 }}
+          justify={"flex-end"}
+          direction={"row"}
+          spacing={6}
+          display={{ base: isOpen ? "flex" : "none", md: "flex" }}
+        >
+          {["Home", "About", "Services", "Contact"].map((item) => (
+            <Link
+              key={item}
+              p={2}
+              href={"#"}
+              fontSize={"sm"}
+              fontWeight={500}
+              color="whiteAlpha.900"
+              _hover={{
+                textDecoration: "none",
+                color: "cyan.300",
+                textShadow: "0 0 8px cyan",
+              }}
+            >
+              {item}
+            </Link>
+          ))}
+        </Stack>
+      </Flex>
+    </Box>
   );
 };
 

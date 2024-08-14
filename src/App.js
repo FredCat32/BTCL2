@@ -1,34 +1,58 @@
 import React from "react";
-import { ChakraProvider, Box, Heading, VStack } from "@chakra-ui/react";
-import CryptoPrices from "./Components/CryptoPrices";
-import LastBlockTime from "./Components/LastBlockTime";
+import { ChakraProvider, Box, VStack, Container } from "@chakra-ui/react";
+import { WalletProvider } from "./WalletContext";
+import Navbar from "./Components/NavBar";
+import CryptoMarquee from "./Components/CryptoMarquee";
 import SwapInterface from "./Components/SwapInterface";
 import LiquidityInterface from "./Components/LiquidityInterface";
 import WalletConnection from "./Components/WalletConnection";
+import LastBlockTime from "./Components/LastBlockTime";
+import ALEXVolumeTracker from "./Components/ALEXVolumeTracker";
+
+import theme from "./theme";
 
 function App() {
   return (
-    <ChakraProvider>
-      <Box
-        textAlign="center"
-        py={10}
-        px={6}
-        backgroundImage="url('/background.jpg')"
-        backgroundSize="cover"
-        backgroundPosition="center"
-        minHeight="100vh"
-      >
-        <Heading as="h1" size="2xl" mb={6}>
-          StackSwap DEX
-        </Heading>
-        <VStack spacing={8}>
-          <WalletConnection />
-          <SwapInterface />
-          <LiquidityInterface />
-          <CryptoPrices />
-          <LastBlockTime />
-        </VStack>
-      </Box>
+    <ChakraProvider theme={theme}>
+      <WalletProvider>
+        <Box
+          minHeight="100vh"
+          width="100%"
+          backgroundImage="url('/background.jpg')"
+          backgroundSize="cover"
+          backgroundPosition="center"
+          backgroundAttachment="fixed"
+        >
+          <Navbar />
+          <CryptoMarquee />
+          <ALEXVolumeTracker />
+
+          <Container maxWidth="container.xl" py={8}>
+            <VStack spacing={8} align="stretch">
+              <Box
+                backdropFilter="blur(10px)"
+                backgroundColor="rgba(0, 0, 0, 0.6)"
+                borderRadius="lg"
+                padding={6}
+                boxShadow="dark-lg"
+              >
+                <WalletConnection />
+                <SwapInterface />
+                <LiquidityInterface />
+              </Box>
+              <Box
+                backdropFilter="blur(10px)"
+                backgroundColor="rgba(0, 0, 0, 0.6)"
+                borderRadius="lg"
+                padding={6}
+                boxShadow="dark-lg"
+              >
+                <LastBlockTime />
+              </Box>
+            </VStack>
+          </Container>
+        </Box>
+      </WalletProvider>
     </ChakraProvider>
   );
 }
