@@ -4,36 +4,64 @@ import React, { useEffect, useState } from "react";
 import { Box, Text, Spinner, Alert, AlertIcon } from "@chakra-ui/react";
 
 const LastBlockTime = () => {
-  const [timeSinceBlock, setTimeSinceBlock] = useState(null);
+  const [btcTimeSinceBlock, setBtcTimeSinceBlock] = useState(null);
+  const [stxTimeSinceBlock, setStxTimeSinceBlock] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchBlockTime = async () => {
       try {
-        // Fetch the latest block data
-        const response = await fetch("https://blockstream.info/api/blocks/tip");
-        const data = await response.json();
-        console.log(data);
+        // Fetch the latest Bitcoin block data
+        const btcResponse = await fetch(
+          "https://blockstream.info/api/blocks/tip"
+        );
+        const btcData = await btcResponse.json();
 
-        // Get the current time and block time
+        // Get the current time and block time for Bitcoin
         const currentTime = Math.floor(Date.now() / 1000);
-        const blockTime = data[0].timestamp;
+        const btcBlockTime = btcData[0].timestamp;
 
-        // Calculate the difference in seconds
-        const timeDiff = currentTime - blockTime;
+        // Calculate the difference in seconds for Bitcoin
+        const btcTimeDiff = currentTime - btcBlockTime;
 
         // Convert to a human-readable format (e.g., "5 minutes ago")
-        const minutes = Math.floor(timeDiff / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
+        const btcMinutes = Math.floor(btcTimeDiff / 60);
+        const btcHours = Math.floor(btcMinutes / 60);
+        const btcDays = Math.floor(btcHours / 24);
 
-        if (days > 0) {
-          setTimeSinceBlock(`${days} day(s) ago`);
-        } else if (hours > 0) {
-          setTimeSinceBlock(`${hours} hour(s) ago`);
+        if (btcDays > 0) {
+          setBtcTimeSinceBlock(`${btcDays} day(s) ago`);
+        } else if (btcHours > 0) {
+          setBtcTimeSinceBlock(`${btcHours} hour(s) ago`);
         } else {
-          setTimeSinceBlock(`${minutes} minute(s) ago`);
+          setBtcTimeSinceBlock(`${btcMinutes} minute(s) ago`);
+        }
+
+        // Fetch the latest Stacks block data
+        const stxResponse = await fetch(
+          "https://stacks-node-api.mainnet.stacks.co/extended/v1/block"
+        );
+        const stxData = await stxResponse.json();
+        console.log(stxData);
+
+        // Get the current time and block time for Stacks
+        const stxBlockTime = stxData.results[0].block_time;
+
+        // Calculate the difference in seconds for Stacks
+        const stxTimeDiff = currentTime - stxBlockTime;
+
+        // Convert to a human-readable format for Stacks
+        const stxMinutes = Math.floor(stxTimeDiff / 60);
+        const stxHours = Math.floor(stxMinutes / 60);
+        const stxDays = Math.floor(stxHours / 24);
+
+        if (stxDays > 0) {
+          setStxTimeSinceBlock(`${stxDays} day(s) ago`);
+        } else if (stxHours > 0) {
+          setStxTimeSinceBlock(`${stxHours} hour(s) ago`);
+        } else {
+          setStxTimeSinceBlock(`${stxMinutes} minute(s) ago`);
         }
 
         setLoading(false);
@@ -62,7 +90,10 @@ const LastBlockTime = () => {
   return (
     <Box p={4} borderWidth={1} borderRadius="lg" maxWidth="400px" mx="auto">
       <Text fontSize="lg">
-        <strong>Time Since Last Block:</strong> {timeSinceBlock}
+        <strong>Time Since Last Bitcoin Block:</strong> {btcTimeSinceBlock}
+      </Text>
+      <Text fontSize="lg" mt={4}>
+        <strong>Time Since Last Stacks Block:</strong> {stxTimeSinceBlock}
       </Text>
     </Box>
   );
