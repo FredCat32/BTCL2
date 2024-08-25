@@ -1,0 +1,344 @@
+;; Prediction Market Smart Contract with Improved Input Validation
+
+;; Constants (existing and new)
+(define-constant ERR-NOT-AUTHORIZED (err u100))
+(define-constant ERR-MARKET-NOT-FOUND (err u101))
+(define-constant ERR-ALREADY-RESOLVED (err u102))
+(define-constant ERR-MARKET-NOT-RESOLVED (err u103))
+(define-constant ERR-NO-OUTCOME (err u104))
+(define-constant ERR-INVALID-AMOUNT (err u105))
+(define-constant ERR-TRANSFER-FAILED (err u106))
+(define-constant ERR-INSUFFICIENT-BALANCE (err u107))
+(define-constant ERR-ARITHMETIC-OVERFLOW (err u108))
+(define-constant ERR-NO-POSITION (err u109))
+(define-constant ERR-NO-WINNINGS (err u110))
+(define-constant ERR-INSUFFICIENT-LIQUIDITY (err u111))
+(define-constant ERR-REENTRANT-CALL (err u112))
+(define-constant ERR-INVALID-MARKET (err u113))
+
+(define-constant PRECISION u1000000000000) ;; 10^12 for higher precision
+
+;; Data Variables (unchanged)
+(define-data-var contract-owner principal tx-sender)
+(define-data-var next-market-id uint u1)
+(define-data-var reentrancy-guard bool false)
+
+;; Maps (unchanged)
+(define-map markets uint {
+    resolved: bool,
+    outcome: (optional bool),
+    yes-pool: uint,
+    no-pool: uint,
+    total-liquidity: uint
+})
+
+(define-map user-positions { market-id: uint, user: principal } { yes: uint, no: uint })
+
+;; Helper Functions
+
+(define-private (is-valid-active-market (market-id uint))
+  (match (map-get? markets market-id)
+    market (and (is-some market) (not (get resolved market)))
+    false
+  )
+)
+
+(define-private (transfer-stx (amount uint) (sender principal) (recipient principal))
+    (stx-transfer? amount sender recipient)
+)
+
+(define-private (with-reentrancy-guard (func (lambda ())))
+  (begin
+    (asserts! (not (var-get reentrancy-guard)) ERR-REENTRANT-CALL)
+    (var-set reentrancy-guard true)
+    (let ((result (func)))
+      (var-set reentrancy-guard false)
+      result
+    )
+  )
+)
+
+;; Public Functions
+
+(define-public (create-market (initial-liquidity uint))
+    (let
+        ((market-id (var-get next-market-id)))
+        (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+        (asserts! (> initial-liquidity u0) ERR-INVALID-AMOUNT)
+        
+        ;; Update state
+        (map-set markets market-id {
+            resolved: false,
+            outcome: none,
+            yes-pool: (/ initial-liquidity u2),
+            no-pool: (/ initial-liquidity u2),
+            total-liquidity: initial-liquidity
+        })
+        (var-set next-market-id (+ market-id u1))
+        
+        ;; Transfer initial liquidity from contract owner
+        (match (transfer-stx initial-liquidity tx-sender (as-contract tx-sender))
+            success (ok market-id)
+            error ERR-TRANSFER-FAILED
+        )
+    )
+)
+
+(define-public (add-liquidity (market-id uint) (stx-amount uint))
+  (with-reentrancy-guard
+    (lambda ()
+      (let
+        ((market (unwrap! (map-get? markets market-id) ERR-MARKET-NOT-FOUND)))
+        
+        (asserts! (is-valid-active-market market-id) ERR-INVALID-MARKET)
+        (asserts! (> stx-amount u0) ERR-INVALID-AMOUNT)
+        
+        (let
+          ((yes-pool (get yes-pool market))
+           (no-pool (get no-pool market))
+           (total-liquidity (get total-liquidity market))
+           (total-tokens (+ yes-pool no-pool))
+           (yes-ratio (if (is-eq total-tokens u0) 
+                          (/ PRECISION u2)  
+                          (/ (* yes-pool PRECISION) total-tokens)))
+           (no-ratio (- PRECISION yes-ratio)))
+          
+          (asserts! (and (<= yes-ratio PRECISION) (<= no-ratio PRECISION)) ERR-ARITHMETIC-OVERFLOW)
+          
+          (let
+            ((yes-tokens-to-mint (/ (* stx-amount yes-ratio) PRECISION))
+             (no-tokens-to-mint (/ (* stx-amount no-ratio) PRECISION)))
+            
+            (asserts! (and (> yes-tokens-to-mint u0) (> no-tokens-to-mint u0)) ERR-INSUFFICIENT-LIQUIDITY)
+            
+            (asserts! (and (< (+ yes-pool yes-tokens-to-mint) (pow 2 128))
+                           (< (+ no-pool no-tokens-to-mint) (pow 2 128))
+                           (< (+ total-liquidity stx-amount) (pow 2 128)))
+                      ERR-ARITHMETIC-OVERFLOW)
+            
+            ;; Update market state
+            (map-set markets market-id (merge market {
+                yes-pool: (+ yes-pool yes-tokens-to-mint),
+                no-pool: (+ no-pool no-tokens-to-mint),
+                total-liquidity: (+ total-liquidity stx-amount)
+            }))
+            
+            ;; Update user position
+            (let ((current-position (default-to { yes: u0, no: u0 } 
+                                     (map-get? user-positions { market-id: market-id, user: tx-sender }))))
+                (map-set user-positions 
+                    { market-id: market-id, user: tx-sender }
+                    {
+                        yes: (+ (get yes current-position) yes-tokens-to-mint),
+                        no: (+ (get no current-position) no-tokens-to-mint)
+                    })
+            )
+            
+            ;; Transfer STX from user to contract
+            (match (transfer-stx stx-amount tx-sender (as-contract tx-sender))
+                success (ok { yes: yes-tokens-to-mint, no: no-tokens-to-mint })
+                error ERR-TRANSFER-FAILED
+            )
+          )
+        )
+      )
+    )
+  )
+)
+
+(define-public (swap-stx-to-yes (market-id uint) (stx-amount uint))
+  (with-reentrancy-guard
+    (lambda ()
+      (let
+        ((market (unwrap! (map-get? markets market-id) ERR-MARKET-NOT-FOUND)))
+        
+        (asserts! (is-valid-active-market market-id) ERR-INVALID-MARKET)
+        (asserts! (> stx-amount u0) ERR-INVALID-AMOUNT)
+        
+        (let
+          ((yes-pool (get yes-pool market))
+           (total-liquidity (get total-liquidity market))
+           (yes-amount (/ (* stx-amount yes-pool) (+ total-liquidity stx-amount))))
+          
+          ;; Update market state
+          (map-set markets market-id (merge market {
+              yes-pool: (- yes-pool yes-amount),
+              total-liquidity: (+ total-liquidity stx-amount)
+          }))
+          
+          ;; Update user position
+          (let ((current-position (default-to { yes: u0, no: u0 } 
+                                   (map-get? user-positions { market-id: market-id, user: tx-sender }))))
+              (map-set user-positions 
+                  { market-id: market-id, user: tx-sender }
+                  {
+                      yes: (+ (get yes current-position) yes-amount),
+                      no: (get no current-position)
+                  })
+          )
+          
+          ;; Transfer STX from user to contract
+          (match (transfer-stx stx-amount tx-sender (as-contract tx-sender))
+              success (ok yes-amount)
+              error ERR-TRANSFER-FAILED
+          )
+        )
+      )
+    )
+  )
+)
+
+(define-public (swap-stx-to-no (market-id uint) (stx-amount uint))
+  (with-reentrancy-guard
+    (lambda ()
+      (let
+        ((market (unwrap! (map-get? markets market-id) ERR-MARKET-NOT-FOUND)))
+        
+        (asserts! (is-valid-active-market market-id) ERR-INVALID-MARKET)
+        (asserts! (> stx-amount u0) ERR-INVALID-AMOUNT)
+        
+        (let
+          ((no-pool (get no-pool market))
+           (total-liquidity (get total-liquidity market))
+           (no-amount (/ (* stx-amount no-pool) (+ total-liquidity stx-amount))))
+          
+          ;; Update market state
+          (map-set markets market-id (merge market {
+              no-pool: (- no-pool no-amount),
+              total-liquidity: (+ total-liquidity stx-amount)
+          }))
+          
+          ;; Update user position
+          (let ((current-position (default-to { yes: u0, no: u0 } 
+                                   (map-get? user-positions { market-id: market-id, user: tx-sender }))))
+              (map-set user-positions 
+                  { market-id: market-id, user: tx-sender }
+                  {
+                      yes: (get yes current-position),
+                      no: (+ (get no current-position) no-amount)
+                  })
+          )
+          
+          ;; Transfer STX from user to contract
+          (match (transfer-stx stx-amount tx-sender (as-contract tx-sender))
+              success (ok no-amount)
+              error ERR-TRANSFER-FAILED
+          )
+        )
+      )
+    )
+  )
+)
+
+(define-public (remove-liquidity (market-id uint) (liquidity-to-remove uint))
+  (with-reentrancy-guard
+    (lambda ()
+      (let
+        ((market (unwrap! (map-get? markets market-id) ERR-MARKET-NOT-FOUND))
+         (user-position (unwrap! (map-get? user-positions { market-id: market-id, user: tx-sender }) ERR-NO-POSITION)))
+        
+        (asserts! (is-valid-active-market market-id) ERR-INVALID-MARKET)
+        (asserts! (> liquidity-to-remove u0) ERR-INVALID-AMOUNT)
+        
+        (let
+          ((yes-pool (get yes-pool market))
+           (no-pool (get no-pool market))
+           (total-liquidity (get total-liquidity market))
+           (total-user-liquidity (+ (get yes user-position) (get no user-position)))
+           (user-liquidity-share (/ (* total-user-liquidity PRECISION) (+ yes-pool no-pool)))
+           (max-removable-liquidity (/ (* total-liquidity user-liquidity-share) PRECISION)))
+          
+          (asserts! (<= liquidity-to-remove max-removable-liquidity) ERR-INSUFFICIENT-LIQUIDITY)
+          
+          (let
+            ((yes-to-remove (/ (* liquidity-to-remove (get yes user-position)) total-user-liquidity))
+             (no-to-remove (/ (* liquidity-to-remove (get no user-position)) total-user-liquidity))
+             (stx-to-return (/ (* liquidity-to-remove total-liquidity) (+ yes-pool no-pool))))
+            
+            ;; Update market
+            (map-set markets market-id (merge market {
+                yes-pool: (- yes-pool yes-to-remove),
+                no-pool: (- no-pool no-to-remove),
+                total-liquidity: (- total-liquidity stx-to-return)
+            }))
+            
+            ;; Update user position
+            (map-set user-positions 
+                { market-id: market-id, user: tx-sender }
+                {
+                    yes: (- (get yes user-position) yes-to-remove),
+                    no: (- (get no user-position) no-to-remove)
+                })
+            
+            ;; Transfer STX back to user
+            (match (as-contract (transfer-stx stx-to-return (as-contract tx-sender) tx-sender))
+                success (ok stx-to-return)
+                error ERR-TRANSFER-FAILED
+            )
+          )
+        )
+      )
+    )
+  )
+)
+
+(define-public (resolve-market (market-id uint) (outcome bool))
+    (let
+        ((market (unwrap! (map-get? markets market-id) ERR-MARKET-NOT-FOUND)))
+        (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+        (asserts! (not (get resolved market)) ERR-ALREADY-RESOLVED)
+        
+        (let
+            ((yes-pool (get yes-pool market))
+             (no-pool (get no-pool market))
+             (total-stx (get total-liquidity market)))
+            
+            ;; Set all STX to the winning pool, make losing pool zero
+            (map-set markets market-id (merge market {
+                resolved: true,
+                outcome: (some outcome),
+                yes-pool: (if outcome total-stx u0),
+                no-pool: (if outcome u0 total-stx)
+            }))
+            
+            (ok true)
+        )
+    )
+)
+
+(define-public (claim-winnings (market-id uint))
+    (let
+        ((market (unwrap! (map-get? markets market-id) ERR-MARKET-NOT-FOUND))
+         (user-position (unwrap! (map-get? user-positions { market-id: market-id, user: tx-sender }) ERR-NO-POSITION)))
+        
+        (asserts! (get resolved market) ERR-MARKET-NOT-RESOLVED)
+        (asserts! (is-some (get outcome market)) ERR-NO-OUTCOME)
+        
+        (let
+            ((outcome (unwrap! (get outcome market) ERR-NO-OUTCOME))
+             (winning-pool (if outcome (get yes-pool market) (get no-pool market)))
+             (user-winning-tokens (if outcome (get yes user-position) (get no user-position)))
+             (total-winning-tokens (if outcome (get yes-pool market) (get no-pool market))))
+            
+            (asserts! (> user-winning-tokens u0) ERR-NO-WINNINGS)
+            
+            (let
+                ((winnings (/ (* user-winning-tokens winning-pool) total-winning-tokens)))
+                
+                ;; Clear user position
+                (map-delete user-positions { market-id: market-id, user: tx-sender })
+                
+                ;; Transfer winnings to user
+                (match (as-contract (transfer-stx winnings (as-contract tx-sender) tx-sender))
+                    success (ok winnings)
+                    error ERR-TRANSFER-FAILED
+                )
+            )
+        )
+    )
+)
+
+;; Get market details
+(define-read-only (get-market (market-id uint))
+    (map-get? markets market-id)
+)

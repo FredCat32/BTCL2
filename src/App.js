@@ -1,58 +1,90 @@
 import React from "react";
-import { ChakraProvider, Box, VStack, Container } from "@chakra-ui/react";
-import { WalletProvider } from "./WalletContext";
+import { ChakraProvider, Box, Container } from "@chakra-ui/react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { Connect } from "@stacks/connect-react";
+import { WalletProvider, useWallet } from "./WalletContext";
 import Navbar from "./Components/NavBar";
 import CryptoMarquee from "./Components/CryptoMarquee";
-import SwapInterface from "./Components/SwapInterface";
-import LiquidityInterface from "./Components/LiquidityInterface";
-import WalletConnection from "./Components/WalletConnection";
-import LastBlockTime from "./Components/LastBlockTime";
-import ALEXVolumeTracker from "./Components/ALEXVolumeTracker";
-
+import MarketList from "./Components/MarketList";
+import BettingInterface from "./Components/BettingInterface";
+import CreateMarket from "./Components/CreateMarket";
+import AdminMarketList from "./Components/AdminMarketList";
 import theme from "./theme";
 
+// Admin check function
+export const isAdmin = (userAddress) => {
+  const adminAddresses = ["ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C"]; // Your admin address
+  return adminAddresses.includes(userAddress);
+};
+
+const ProtectedAdminRoute = ({ children }) => {
+  const { userData } = useWallet();
+  const userAddress = "ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C";
+
+  if (!isAdmin(userAddress)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+const AppContent = () => {
+  const { userData } = useWallet();
+  const userAddress = userData?.profile?.stxAddress?.mainnet;
+
+  return (
+    <Router>
+      <Box
+        minHeight="100vh"
+        width="100%"
+        backgroundSize="cover"
+        backgroundPosition="center"
+        backgroundAttachment="fixed"
+      >
+        <Navbar userAddress={userAddress} />
+        <CryptoMarquee />
+        <Container maxWidth="container.xl" py={8}>
+          <Routes>
+            <Route path="/" element={<MarketList />} />
+            <Route
+              path="/bet/:marketId/:option"
+              element={<BettingInterface />}
+            />
+            <Route path="/create" element={<CreateMarket />} />
+            <Route
+              path="/admin/markets"
+              element={
+                <ProtectedAdminRoute>
+                  <AdminMarketList />
+                </ProtectedAdminRoute>
+              }
+            />
+          </Routes>
+        </Container>
+      </Box>
+    </Router>
+  );
+};
+
 function App() {
+  const appConfig = {
+    appName: "Bitcoin Prediction",
+    appIconUrl: "/your-app-icon.png",
+    network: "mainnet",
+  };
+
   return (
     <ChakraProvider theme={theme}>
-      <WalletProvider>
-        <Box
-          minHeight="100vh"
-          width="100%"
-          backgroundImage="url('/background.jpg')"
-          backgroundSize="cover"
-          backgroundPosition="center"
-          backgroundAttachment="fixed"
-        >
-          <Navbar />
-          <CryptoMarquee />
-          <ALEXVolumeTracker />
-
-          <Container maxWidth="container.xl" py={8}>
-            <VStack spacing={8} align="stretch">
-              <Box
-                backdropFilter="blur(10px)"
-                backgroundColor="rgba(0, 0, 0, 0.6)"
-                borderRadius="lg"
-                padding={6}
-                boxShadow="dark-lg"
-              >
-                <WalletConnection />
-                <SwapInterface />
-                <LiquidityInterface />
-              </Box>
-              <Box
-                backdropFilter="blur(10px)"
-                backgroundColor="rgba(0, 0, 0, 0.6)"
-                borderRadius="lg"
-                padding={6}
-                boxShadow="dark-lg"
-              >
-                <LastBlockTime />
-              </Box>
-            </VStack>
-          </Container>
-        </Box>
-      </WalletProvider>
+      <Connect authOptions={appConfig}>
+        <WalletProvider>
+          <AppContent />
+        </WalletProvider>
+      </Connect>
     </ChakraProvider>
   );
 }
