@@ -21,7 +21,7 @@ import {
   InputGroup,
   InputRightAddon,
 } from "@chakra-ui/react";
-import { hexToCV, cvToString } from "@stacks/transactions";
+import { hexToCV, cvToString, makeContractCall } from "@stacks/transactions";
 import { cvToHex, uintCV, intCV } from "@stacks/transactions";
 import { Cl, parseReadOnlyResponse } from "@stacks/transactions";
 import { StacksTestnet } from "@stacks/network";
@@ -31,6 +31,7 @@ import {
   bufferCVFromString,
   standardPrincipalCV,
 } from "@stacks/transactions";
+import { useConnect } from "@stacks/connect-react";
 
 const BettingInterface = () => {
   const location = useLocation();
@@ -48,7 +49,7 @@ const BettingInterface = () => {
     }
     return null;
   };
-
+  const { doContractCall } = useConnect();
   const [apiResponse, setApiResponse] = useState(null);
   const [apiResponse2, setApiResponse2] = useState(null);
   const [decodedOwner, setDecodedOwner] = useState(null);
@@ -112,10 +113,55 @@ const BettingInterface = () => {
   };
   const calculateSlippage = (amount, poolSize, totalLiquidity) => {
     const constantProduct = poolSize * totalLiquidity;
-    const newPoolSize = poolSize + parseInt(amount);
+    const newPoolSize = poolSize + parseFloat(amount);
+    const newTotalLiquidity = totalLiquidity + parseFloat(amount);
     const newOtherPoolSize = constantProduct / newPoolSize;
-    const slippage = (1 - (totalLiquidity - newOtherPoolSize) / amount) * 100;
-    return slippage.toFixed(2);
+
+    const priceBeforeSwap = totalLiquidity / poolSize;
+    const priceAfterSwap = newTotalLiquidity / newPoolSize;
+
+    const slippage =
+      ((priceAfterSwap - priceBeforeSwap) / priceBeforeSwap) * 100;
+
+    return Math.abs(slippage).toFixed(2);
+  };
+
+  const handleSwapStxToYes = async () => {
+    const functionArgs = [
+      uintCV(onChainId), // market-id
+      uintCV(parseFloat(transactionAmount) * 1000000), // stx-amount in microSTX
+    ];
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName: "swap-stx-to-yes",
+      functionArgs,
+      network: new StacksTestnet(),
+      onFinish: (data) => {
+        console.log("Transaction submitted:", data);
+        // You can add additional logic here, like updating UI or fetching new data
+      },
+      onCancel: () => {
+        console.log("Transaction canceled");
+      },
+    };
+
+    try {
+      await doContractCall(options);
+    } catch (error) {
+      console.error("Error calling contract:", error);
+      setError(error.message);
+    }
+  };
+
+  const handleTransaction = () => {
+    if (location.pathname.includes("/yes")) {
+      handleSwapStxToYes();
+    } else {
+      // Implement swap-stx-to-no if needed
+      console.log("Selling is not implemented yet");
+    }
   };
 
   const fetchUserPosition = async () => {
@@ -193,14 +239,6 @@ const BettingInterface = () => {
     if (/^\d*\.?\d{0,6}$/.test(value) || value === "") {
       setTransactionAmount(value);
     }
-  };
-
-  const handleTransaction = () => {
-    const action = location.pathname.includes("/yes") ? "Buying" : "Selling";
-    console.log(
-      `${action} ${transactionAmount} STX worth of tokens for market ${marketId}`
-    );
-    // Implement the actual contract interaction here
   };
 
   return (
