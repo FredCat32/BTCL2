@@ -63,7 +63,11 @@ const MarketList = () => {
                   <Button
                     as={Link}
                     to={`/bet/${market._id}/yes`}
-                    state={{ market, marketId: market._id }}
+                    state={{
+                      market,
+                      marketId: market._id,
+                      onChainId: market.onChainId,
+                    }}
                     colorScheme="green"
                     size="sm"
                   >
@@ -72,7 +76,11 @@ const MarketList = () => {
                   <Button
                     as={Link}
                     to={`/bet/${market._id}/no`}
-                    state={{ market, marketId: market._id }}
+                    state={{
+                      market,
+                      marketId: market._id,
+                      onChainId: market.onChainId,
+                    }}
                     colorScheme="red"
                     size="sm"
                   >

@@ -10,6 +10,8 @@ const Navbar = () => {
   const { userData } = useWallet();
   const userAddress = userData?.profile?.stxAddress?.testnet;
   const isAdmin = userAddress === ADMIN_ADDRESS;
+  console.log(isAdmin);
+  console.log(userAddress);
 
   const navItems = [
     { name: "Home", path: "/" },

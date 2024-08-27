@@ -1,245 +1,335 @@
-import React, { useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Box,
   VStack,
-  Heading,
-  Text,
+  HStack,
   Button,
-  Input,
-  Slider,
-  SliderTrack,
-  SliderFilledTrack,
-  SliderThumb,
+  Text,
+  Heading,
+  Divider,
+  Spinner,
+  useColorModeValue,
+  Card,
+  CardHeader,
+  CardBody,
+  SimpleGrid,
   Stat,
   StatLabel,
   StatNumber,
-  StatHelpText,
-  StatArrow,
-  Flex,
-  useColorModeValue,
-  Select,
+  Input,
+  InputGroup,
+  InputRightAddon,
 } from "@chakra-ui/react";
-import { uintCV, serializeCV } from "@stacks/transactions";
+import { hexToCV, cvToString } from "@stacks/transactions";
+import { cvToHex, uintCV, intCV } from "@stacks/transactions";
+import { Cl, parseReadOnlyResponse } from "@stacks/transactions";
+import { StacksTestnet } from "@stacks/network";
+import {
+  callReadOnlyFunction,
+  cvToJSON,
+  bufferCVFromString,
+  standardPrincipalCV,
+} from "@stacks/transactions";
 
 const BettingInterface = () => {
-  const { option } = useParams();
   const location = useLocation();
-  const { market, marketId } = location.state || {};
-  const [betAmount, setBetAmount] = useState(10);
+  const { market, marketId, onChainId } = location.state || {};
 
-  // State for market details fetching
-  const [marketDetails, setMarketDetails] = useState(null);
-  const [marketDetailsError, setMarketDetailsError] = useState(null);
-  const [apiEndpoint, setApiEndpoint] = useState(
-    "https://stacks-node-api.testnet.stacks.co"
-  );
+  const parseClarityValue = (clarityString) => {
+    const match = clarityString.match(/\(ok \(tuple (.*)\)\)/);
+    if (match) {
+      const pairs = match[1].match(/\((.*?) (.*?)\)/g);
+      return pairs.reduce((acc, pair) => {
+        const [key, value] = pair.slice(1, -1).split(" ");
+        acc[key] = value.startsWith("u") ? parseInt(value.slice(1)) : value;
+        return acc;
+      }, {});
+    }
+    return null;
+  };
+
+  const [apiResponse, setApiResponse] = useState(null);
+  const [apiResponse2, setApiResponse2] = useState(null);
+  const [decodedOwner, setDecodedOwner] = useState(null);
+  const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const bgColor = useColorModeValue("gray.100", "gray.700");
-  const textColor = useColorModeValue("gray.800", "white");
+  const [transactionAmount, setTransactionAmount] = useState("");
 
   const contractAddress = "ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C";
   const contractName = "market8";
+  const apiEndpoint = "https://stacks-node-api.testnet.stacks.co";
+  const [slippage, setSlippage] = useState(0);
 
-  const calculatePotentialWinnings = () => {
-    if (market) {
-      const totalPool = market.yesPool + market.noPool;
-      const oppositePool = option === "yes" ? market.noPool : market.yesPool;
-      return (betAmount / totalPool) * oppositePool;
+  const bgColor = useColorModeValue("gray.100", "gray.700");
+
+  const marketDetails = apiResponse ? parseClarityValue(apiResponse) : null;
+  const userPosition = apiResponse2 ? parseClarityValue(apiResponse2) : null;
+
+  useEffect(() => {
+    if (onChainId) {
+      fetchMarketDetails();
+      fetchUserPosition();
     }
-    return 0;
-  };
-
-  const handleBet = () => {
-    // Implement bet logic here
-    console.log(`Placing bet of ${betAmount} on ${option}`);
-  };
-
+  }, [onChainId]);
+  useEffect(() => {
+    if (marketDetails && transactionAmount) {
+      const poolSize = location.pathname.includes("/yes")
+        ? marketDetails["yes-pool"]
+        : marketDetails["no-pool"];
+      const calculatedSlippage = calculateSlippage(
+        transactionAmount * 1000000,
+        poolSize,
+        marketDetails["total-liquidity"]
+      );
+      setSlippage(calculatedSlippage);
+    }
+  }, [transactionAmount, marketDetails]);
   const fetchMarketDetails = async () => {
     setIsLoading(true);
-    setMarketDetailsError(null);
+    const functionName = "get-market-details";
+    const tokenId = uintCV(onChainId);
+    const network = new StacksTestnet();
 
-    // Correctly serialize uint 4 for Clarity
-    const uintArg = serializeCV(uintCV(4));
-
-    const body = JSON.stringify({
-      sender: contractAddress,
-      arguments: [uintArg],
-    });
+    const options = {
+      contractAddress,
+      contractName,
+      functionName,
+      functionArgs: [tokenId],
+      network,
+      senderAddress: contractAddress,
+    };
 
     try {
-      const url = `${apiEndpoint}/v2/contracts/call-read/${contractAddress}/${contractName}/get-market-details`;
-      console.log("Fetching from URL:", url);
-      console.log("Request body:", body);
+      const response = await callReadOnlyFunction(options);
+      console.log(response);
+      setApiResponse(cvToString(response));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const calculateSlippage = (amount, poolSize, totalLiquidity) => {
+    const constantProduct = poolSize * totalLiquidity;
+    const newPoolSize = poolSize + parseInt(amount);
+    const newOtherPoolSize = constantProduct / newPoolSize;
+    const slippage = (1 - (totalLiquidity - newOtherPoolSize) / amount) * 100;
+    return slippage.toFixed(2);
+  };
+
+  const fetchUserPosition = async () => {
+    setIsLoading(true);
+    const functionName = "get-user-position";
+    const marketId = uintCV(onChainId);
+    const user = standardPrincipalCV(contractAddress);
+    const network = new StacksTestnet();
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName,
+      functionArgs: [marketId, user],
+      network,
+      senderAddress: contractAddress,
+    };
+
+    try {
+      const response = await callReadOnlyFunction(options);
+      console.log("Response:", response);
+      setApiResponse2(cvToString(response));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getContractOwner = async () => {
+    setIsLoading(true);
+    setError(null);
+    setDecodedOwner(null);
+
+    try {
+      const url = `${apiEndpoint}/v2/contracts/call-read/${contractAddress}/${contractName}/get-contract-owner`;
+      console.log("Fetching contract owner from URL:", url);
 
       const response = await fetch(url, {
-        headers: { "Content-Type": "application/json" },
         method: "POST",
-        body,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender: contractAddress,
+          arguments: [],
+        }),
       });
 
-      console.log("Response status:", response.status);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
       console.log(
-        "Response headers:",
-        Object.fromEntries(response.headers.entries())
+        "Contract owner raw response:",
+        JSON.stringify(responseData, null, 2)
       );
 
-      const responseText = await response.text();
-      console.log("Raw response text:", responseText);
-
-      let responseBody;
-      try {
-        responseBody = JSON.parse(responseText);
-        console.log("Parsed response body:", responseBody);
-      } catch (e) {
-        console.error("Error parsing response as JSON:", e);
-        throw new Error(`Failed to parse response as JSON: ${responseText}`);
-      }
-
-      if (responseBody.okay) {
-        if (responseBody.result) {
-          const decodedResult = decodeMarketDetails(responseBody.result);
-          console.log("Decoded market details:", decodedResult);
-          setMarketDetails(decodedResult);
-        } else {
-          throw new Error("Response okay, but no result found");
-        }
-      } else {
-        throw new Error(`API call failed: ${JSON.stringify(responseBody)}`);
+      if (responseData.okay && responseData.result) {
+        const clarityValue = hexToCV(responseData.result);
+        const ownerAddress = cvToString(clarityValue);
+        setDecodedOwner(ownerAddress);
       }
     } catch (err) {
-      console.error("Error fetching market details:", err);
-      setMarketDetailsError(
-        err.message || "An error occurred while fetching the market details"
+      console.error("Error fetching contract owner:", err);
+      setError(
+        err.message || "An error occurred while fetching the contract owner"
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const decodeMarketDetails = (hex) => {
-    // This function will need to be implemented based on the exact structure of your market details
-    // For now, we'll just return the hex string
-    console.log("Decoding market details:", hex);
-    return hex;
+  const handleAmountChange = (event) => {
+    const value = event.target.value;
+    if (/^\d*\.?\d{0,6}$/.test(value) || value === "") {
+      setTransactionAmount(value);
+    }
   };
 
-  if (!market) return <Text>No market data available</Text>;
+  const handleTransaction = () => {
+    const action = location.pathname.includes("/yes") ? "Buying" : "Selling";
+    console.log(
+      `${action} ${transactionAmount} STX worth of tokens for market ${marketId}`
+    );
+    // Implement the actual contract interaction here
+  };
 
   return (
-    <Box
-      maxWidth="500px"
-      margin="auto"
-      p={6}
-      bg={bgColor}
-      borderRadius="lg"
-      boxShadow="xl"
-    >
+    <Box maxWidth="600px" margin="auto" p={6}>
       <VStack spacing={6} align="stretch">
-        <Heading size="lg" color={textColor}>
-          {market.question}
-        </Heading>
-        <Text
-          fontSize="xl"
-          fontWeight="bold"
-          color={option === "yes" ? "green.500" : "red.500"}
-        >
-          Betting on: {option.toUpperCase()}
-        </Text>
-        <Text fontSize="sm" color="gray.500">
-          Market ID: {marketId}
-        </Text>
-        <Flex justify="space-between">
-          <Stat>
-            <StatLabel>Yes Pool</StatLabel>
-            <StatNumber>{market.yesPool}</StatNumber>
-            <StatHelpText>
-              <StatArrow type="increase" />
-              {(
-                (market.yesPool / (market.yesPool + market.noPool)) *
-                100
-              ).toFixed(2)}
-              %
-            </StatHelpText>
-          </Stat>
-          <Stat>
-            <StatLabel>No Pool</StatLabel>
-            <StatNumber>{market.noPool}</StatNumber>
-            <StatHelpText>
-              <StatArrow type="decrease" />
-              {(
-                (market.noPool / (market.yesPool + market.noPool)) *
-                100
-              ).toFixed(2)}
-              %
-            </StatHelpText>
-          </Stat>
-        </Flex>
-        <Text fontWeight="bold">Bet Amount:</Text>
-        <Slider
-          value={betAmount}
-          onChange={(value) => setBetAmount(value)}
-          min={1}
-          max={100}
-          step={1}
-        >
-          <SliderTrack>
-            <SliderFilledTrack />
-          </SliderTrack>
-          <SliderThumb />
-        </Slider>
-        <Input
-          value={betAmount}
-          onChange={(e) => setBetAmount(Number(e.target.value))}
-          type="number"
-          min={1}
-        />
-        <Stat>
-          <StatLabel>Potential Winnings</StatLabel>
-          <StatNumber>{calculatePotentialWinnings().toFixed(2)}</StatNumber>
-        </Stat>
-        <Button
-          onClick={handleBet}
-          colorScheme={option === "yes" ? "green" : "red"}
-        >
-          Place Bet
-        </Button>
+        <Card>
+          <CardHeader>
+            <Heading size="md">
+              {market?.question || "Betting Market Interface"}
+            </Heading>
+          </CardHeader>
+          <CardBody>
+            <VStack spacing={4} align="stretch">
+              <HStack justifyContent="space-between">
+                <Button
+                  onClick={getContractOwner}
+                  isLoading={isLoading}
+                  colorScheme="blue"
+                >
+                  Get Contract Owner
+                </Button>
+                {onChainId && (
+                  <Text fontWeight="bold">On-chain ID: {onChainId}</Text>
+                )}
+              </HStack>
 
-        {/* Section for market details */}
-        <Box mt={6}>
-          <Heading size="md" mb={2}>
-            Market Details
-          </Heading>
-          <Select
-            value={apiEndpoint}
-            onChange={(e) => setApiEndpoint(e.target.value)}
-            mb={2}
-          >
-            <option value="https://stacks-node-api.testnet.stacks.co">
-              Default Testnet API
-            </option>
-            <option value="https://stacks-node-api.mainnet.stacks.co">
-              Mainnet API (be cautious!)
-            </option>
-            <option value="https://stacks-node-api.xenon.blockstack.org">
-              Xenon Testnet API
-            </option>
-          </Select>
-          <Button onClick={fetchMarketDetails} isLoading={isLoading} mb={2}>
-            Fetch Market Details
-          </Button>
-          {marketDetailsError ? (
-            <Text color="red.500">Error: {marketDetailsError}</Text>
-          ) : (
-            <Text fontSize="sm" color="gray.500">
-              Market Details:{" "}
-              {marketDetails
-                ? JSON.stringify(marketDetails, null, 2)
-                : "Not available"}
-            </Text>
-          )}
-        </Box>
+              {isLoading && (
+                <HStack justifyContent="center">
+                  <Spinner />
+                  <Text>Loading...</Text>
+                </HStack>
+              )}
+
+              {error && (
+                <Text color="red.500" fontWeight="bold">
+                  Error: {error}
+                </Text>
+              )}
+
+              {decodedOwner && (
+                <Text fontWeight="medium">Contract Owner: {decodedOwner}</Text>
+              )}
+
+              <Divider />
+
+              {marketDetails && (
+                <>
+                  <Heading size="sm">Market Details</Heading>
+                  <SimpleGrid columns={2} spacing={4}>
+                    <Stat>
+                      <StatLabel>No Pool</StatLabel>
+                      <StatNumber>
+                        {marketDetails["no-pool"] / 1000000} STX
+                      </StatNumber>
+                    </Stat>
+                    <Stat>
+                      <StatLabel>Yes Pool</StatLabel>
+                      <StatNumber>
+                        {marketDetails["yes-pool"] / 1000000} STX
+                      </StatNumber>
+                    </Stat>
+                    <Stat>
+                      <StatLabel>Total Liquidity</StatLabel>
+                      <StatNumber>
+                        {marketDetails["total-liquidity"] / 1000000} STX
+                      </StatNumber>
+                    </Stat>
+                    <Stat>
+                      <StatLabel>Outcome</StatLabel>
+                      <StatNumber>{marketDetails.outcome}</StatNumber>
+                    </Stat>
+                    <Stat>
+                      <StatLabel>Resolved</StatLabel>
+                      <StatNumber>
+                        {marketDetails.resolved.toString()}
+                      </StatNumber>
+                    </Stat>
+                  </SimpleGrid>
+                </>
+              )}
+
+              {userPosition && (
+                <>
+                  <Heading size="sm" mt={4}>
+                    Your Position
+                  </Heading>
+                  <SimpleGrid columns={2} spacing={4}>
+                    <Stat>
+                      <StatLabel>No</StatLabel>
+                      <StatNumber>{userPosition.no / 1000000} STX</StatNumber>
+                    </Stat>
+                    <Stat>
+                      <StatLabel>Yes</StatLabel>
+                      <StatNumber>{userPosition.yes / 1000000} STX</StatNumber>
+                    </Stat>
+                  </SimpleGrid>
+                </>
+              )}
+
+              <Divider />
+
+              <Heading size="sm">
+                {location.pathname.includes("/yes") ? "Buy Yes" : "Sell No"}{" "}
+                Tokens
+              </Heading>
+              <HStack>
+                <InputGroup>
+                  <Input
+                    type="text"
+                    value={transactionAmount}
+                    onChange={handleAmountChange}
+                    placeholder="Enter amount"
+                  />
+                  <InputRightAddon children="STX" />
+                </InputGroup>
+                <Button
+                  onClick={handleTransaction}
+                  colorScheme={
+                    location.pathname.includes("/yes") ? "green" : "red"
+                  }
+                  isDisabled={!transactionAmount}
+                >
+                  {location.pathname.includes("/yes") ? "Buy" : "Sell"}
+                </Button>
+                <Text>Estimated Slippage: {slippage}%</Text>
+              </HStack>
+            </VStack>
+          </CardBody>
+        </Card>
       </VStack>
     </Box>
   );
