@@ -96,23 +96,50 @@ const CreateMarket = () => {
       setIsSubmitting(false);
     }
   };
-
   const storeMarketInDatabase = async (txId) => {
     try {
-      await axios.post(`${API_URL}/api/markets`, {
+      const marketData = {
         question,
-        initialLiquidity,
-        yesPercentage,
-        feePercentage,
+        yesPool: initialLiquidity * (yesPercentage / 100),
+        noPool: initialLiquidity * (1 - yesPercentage / 100),
+        totalLiquidity: initialLiquidity,
         txId,
-        visible: false, // Initially set to false
+        visible: false,
+      };
+
+      console.log("Sending market data:", marketData);
+
+      const response = await axios.post(`${API_URL}/api/markets`, marketData);
+      console.log("API Response:", response.data);
+
+      toast({
+        title: "Success",
+        description: "Market created and stored in database",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
       });
     } catch (error) {
       console.error("Error storing market in database:", error);
+      let errorMessage =
+        "Market created on blockchain but failed to store in database";
+
+      if (error.response) {
+        console.error("API error response:", error.response.data);
+        errorMessage += ` - ${
+          error.response.data.message || error.response.statusText
+        }`;
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+        errorMessage += " - No response from server";
+      } else {
+        console.error("Request setup error:", error.message);
+        errorMessage += ` - ${error.message}`;
+      }
+
       toast({
         title: "Warning",
-        description:
-          "Market created on blockchain but failed to store in database",
+        description: errorMessage,
         status: "warning",
         duration: null,
         isClosable: true,

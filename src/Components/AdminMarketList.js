@@ -36,6 +36,9 @@ const AdminMarketList = () => {
   };
 
   const toggleMarketVisibility = async (marketId, currentVisibility) => {
+    const url = `${API_URL}/api/markets/${marketId}`;
+
+    console.log("Sending PATCH request to:", url);
     try {
       await axios.patch(`${API_URL}/api/markets/${marketId}`, {
         visible: !currentVisibility,
@@ -62,26 +65,22 @@ const AdminMarketList = () => {
 
   const updateOnChainId = async (marketId) => {
     try {
-      await axios.patch(`${API_URL}/api/markets/${marketId}/onChainId`, {
-        onChainId: onChainIds[marketId],
-      });
-      toast({
-        title: "Success",
-        description: `On-chain ID updated`,
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      fetchMarkets(); // Refresh the list
+      console.log(`Updating onChainId for market: ${marketId}`);
+      console.log("New onChainId:", onChainIds[marketId]);
+      const response = await axios.patch(
+        `${API_URL}/api/markets/${marketId}/onChainId`,
+        {
+          onChainId: onChainIds[marketId],
+        }
+      );
+      console.log("Update response:", response.data);
+      // ... rest of your function
     } catch (error) {
-      console.error("Error updating on-chain ID:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update on-chain ID",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      console.error(
+        "Error updating on-chain ID:",
+        error.response ? error.response.data : error.message
+      );
+      // ... error handling
     }
   };
 
