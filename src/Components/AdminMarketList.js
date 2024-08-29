@@ -10,6 +10,7 @@ import {
   HStack,
   useToast,
 } from "@chakra-ui/react";
+const API_URL = process.env.REACT_APP_API_URL;
 
 const AdminMarketList = () => {
   const [markets, setMarkets] = useState([]);
@@ -22,9 +23,7 @@ const AdminMarketList = () => {
 
   const fetchMarkets = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:3001/api/markets?all=true"
-      );
+      const response = await axios.get(`${API_URL}/api/markets?all=true`);
       setMarkets(response.data);
       const initialOnChainIds = {};
       response.data.forEach((market) => {
@@ -38,7 +37,7 @@ const AdminMarketList = () => {
 
   const toggleMarketVisibility = async (marketId, currentVisibility) => {
     try {
-      await axios.patch(`http://localhost:3001/api/markets/${marketId}`, {
+      await axios.patch(`${API_URL}/api/markets/${marketId}`, {
         visible: !currentVisibility,
       });
       toast({
@@ -63,12 +62,9 @@ const AdminMarketList = () => {
 
   const updateOnChainId = async (marketId) => {
     try {
-      await axios.patch(
-        `http://localhost:3001/api/markets/${marketId}/onChainId`,
-        {
-          onChainId: onChainIds[marketId],
-        }
-      );
+      await axios.patch(`${API_URL}/api/markets/${marketId}/onChainId`, {
+        onChainId: onChainIds[marketId],
+      });
       toast({
         title: "Success",
         description: `On-chain ID updated`,

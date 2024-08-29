@@ -26,6 +26,7 @@ const CreateMarket = () => {
   const [txId, setTxId] = useState(null);
   const toast = useToast();
   const { doContractCall } = useConnect();
+  const API_URL = process.env.REACT_APP_API_URL;
 
   const createMarket = async () => {
     if (!question.trim()) {
@@ -98,7 +99,7 @@ const CreateMarket = () => {
 
   const storeMarketInDatabase = async (txId) => {
     try {
-      await axios.post("http://localhost:3001/api/markets", {
+      await axios.post(`${API_URL}/api/markets`, {
         question,
         initialLiquidity,
         yesPercentage,

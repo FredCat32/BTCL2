@@ -11,6 +11,8 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
+const API_URL = process.env.REACT_APP_API_URL;
+console.log("API_URL:", API_URL); // Add this line
 
 const MarketList = () => {
   const [markets, setMarkets] = useState([]);
@@ -21,7 +23,7 @@ const MarketList = () => {
 
   const fetchMarkets = async () => {
     try {
-      const response = await axios.get("http://localhost:3001/api/markets");
+      const response = await axios.get(`${API_URL}/api/markets`);
       // Filter markets where visible is true
       const visibleMarkets = response.data.filter(
         (market) => market.visible === true
