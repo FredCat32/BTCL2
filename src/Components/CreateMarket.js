@@ -16,6 +16,7 @@ import axios from "axios";
 import { useConnect } from "@stacks/connect-react";
 import { StacksTestnet } from "@stacks/network";
 import { uintCV } from "@stacks/transactions";
+import { PostConditionMode } from "@stacks/transactions";
 
 const CreateMarket = () => {
   const [question, setQuestion] = useState("");
@@ -58,6 +59,7 @@ const CreateMarket = () => {
         contractName,
         functionName,
         functionArgs,
+        postConditionMode: PostConditionMode.Allow,
         onFinish: async (data) => {
           console.log("Contract call finished", data);
           setTxId(data.txId);

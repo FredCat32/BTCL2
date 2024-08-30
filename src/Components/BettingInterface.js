@@ -22,7 +22,15 @@ import {
   InputRightAddon,
 } from "@chakra-ui/react";
 import { hexToCV, cvToString, makeContractCall } from "@stacks/transactions";
-import { cvToHex, uintCV, intCV } from "@stacks/transactions";
+import {
+  cvToHex,
+  uintCV,
+  intCV,
+  makeStandardSTXPostCondition,
+  FungibleConditionCode,
+  PostConditionMode,
+  Pc,
+} from "@stacks/transactions";
 import { Cl, parseReadOnlyResponse } from "@stacks/transactions";
 import { StacksTestnet } from "@stacks/network";
 import {
@@ -32,10 +40,12 @@ import {
   standardPrincipalCV,
 } from "@stacks/transactions";
 import { useConnect } from "@stacks/connect-react";
+import { useWallet } from "../WalletContext";
 
 const BettingInterface = () => {
   const location = useLocation();
   const { market, marketId, onChainId } = location.state || {};
+  const { userData } = useWallet();
 
   const parseClarityValue = (clarityString) => {
     const match = clarityString.match(/\(ok \(tuple (.*)\)\)/);
@@ -125,12 +135,31 @@ const BettingInterface = () => {
 
     return Math.abs(slippage).toFixed(2);
   };
-
   const handleSwapStxToYes = async () => {
+    if (!userData || !userData.profile) {
+      console.error("User not connected");
+      setError("Please connect your wallet first");
+      return;
+    }
+
+    const userAddress = userData.profile.stxAddress.testnet; // or .testnet if you're using testnet
+
+    // Convert transactionAmount to microSTX
+    const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
+
+    // Add a buffer for potential additional costs (e.g., fees, contract behavior)
+    const bufferAmount = microStxAmount; // 100% buffer
+    const totalAmountWithBuffer = microStxAmount + bufferAmount;
+
     const functionArgs = [
       uintCV(onChainId), // market-id
-      uintCV(parseFloat(transactionAmount) * 1000000), // stx-amount in microSTX
+      uintCV(microStxAmount), // stx-amount in microSTX
     ];
+
+    // Create a post-condition using the Pc helper
+    const postCondition = Pc.principal(userAddress)
+      .willSendLte(totalAmountWithBuffer)
+      .ustx();
 
     const options = {
       contractAddress,
@@ -138,9 +167,10 @@ const BettingInterface = () => {
       functionName: "swap-stx-to-yes",
       functionArgs,
       network: new StacksTestnet(),
+      postConditions: [postCondition],
+      postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
         console.log("Transaction submitted:", data);
-        // You can add additional logic here, like updating UI or fetching new data
       },
       onCancel: () => {
         console.log("Transaction canceled");
@@ -154,13 +184,63 @@ const BettingInterface = () => {
       setError(error.message);
     }
   };
-
   const handleTransaction = () => {
     if (location.pathname.includes("/yes")) {
       handleSwapStxToYes();
+    } else if (location.pathname.includes("/no")) {
+      handleSwapStxToNo();
     } else {
-      // Implement swap-stx-to-no if needed
-      console.log("Selling is not implemented yet");
+      console.log("Unknown transaction type");
+      setError("Unknown transaction type. Please try again.");
+    }
+  };
+  const handleSwapStxToNo = async () => {
+    if (!userData || !userData.profile) {
+      console.error("User not connected");
+      setError("Please connect your wallet first");
+      return;
+    }
+
+    const userAddress = userData.profile.stxAddress.testnet; // Changed to testnet
+
+    // Convert transactionAmount to microSTX
+    const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
+
+    // Add a buffer for potential additional costs (e.g., fees, contract behavior)
+    const bufferAmount = microStxAmount; // 100% buffer
+    const totalAmountWithBuffer = microStxAmount + bufferAmount;
+
+    const functionArgs = [
+      uintCV(onChainId), // market-id
+      uintCV(microStxAmount), // stx-amount in microSTX
+    ];
+
+    // Create a post-condition using the Pc helper
+    const postCondition = Pc.principal(userAddress)
+      .willSendLte(totalAmountWithBuffer)
+      .ustx();
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName: "swap-stx-to-no",
+      functionArgs,
+      network: new StacksTestnet(),
+      postConditions: [postCondition],
+      postConditionMode: PostConditionMode.Deny,
+      onFinish: (data) => {
+        console.log("Transaction submitted:", data);
+      },
+      onCancel: () => {
+        console.log("Transaction canceled");
+      },
+    };
+
+    try {
+      await doContractCall(options);
+    } catch (error) {
+      console.error("Error calling contract:", error);
+      setError(error.message);
     }
   };
 
