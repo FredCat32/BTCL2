@@ -15,19 +15,22 @@ const CryptoMarquee = () => {
     const fetchPrices = async () => {
       try {
         const response = await axios.get(
-          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,cardano,solana,stacks&vs_currencies=usd"
+          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,welsh-corgi-coin,solana,blockstack&vs_currencies=usd"
         );
         console.log(response);
         const formattedPrices = [
           { name: "Bitcoin", symbol: "BTC", price: response.data.bitcoin.usd },
           {
-            name: "Ethereum",
-            symbol: "ETH",
-            price: response.data.ethereum.usd,
+            name: "Stacks",
+            symbol: "STX",
+            price: response.data.blockstack.usd,
           },
-          { name: "Cardano", symbol: "ADA", price: response.data.cardano.usd },
+          {
+            name: "Welsh",
+            symbol: "Welsh",
+            price: response.data["welsh-corgi-coin"].usd,
+          },
           { name: "Solana", symbol: "SOL", price: response.data.solana.usd },
-          { name: "Stacks", symbol: "STX", price: response.data.stacks.usd },
         ];
 
         setPrices(formattedPrices);
@@ -70,7 +73,7 @@ const CryptoMarquee = () => {
             {coin.name} ({coin.symbol}): $
             {coin.price.toLocaleString(undefined, {
               minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
+              maximumFractionDigits: 6,
             })}
           </Text>
         ))}

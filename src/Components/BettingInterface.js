@@ -59,14 +59,21 @@ const BettingInterface = () => {
     }
     return null;
   };
+  const [liquidityAmount, setLiquidityAmount] = useState("");
+
   const { doContractCall } = useConnect();
   const [apiResponse, setApiResponse] = useState(null);
   const [apiResponse2, setApiResponse2] = useState(null);
   const [decodedOwner, setDecodedOwner] = useState(null);
   const [error, setError] = useState(null);
+  const [userPosition, setUserPosition] = useState({ no: 0, yes: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [transactionAmount, setTransactionAmount] = useState("");
-
+  useEffect(() => {
+    if (userData && userData.profile) {
+      fetchUserPosition();
+    }
+  }, [userData]);
   const contractAddress = "ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C";
   const contractName = "market8";
   const apiEndpoint = "https://stacks-node-api.testnet.stacks.co";
@@ -75,7 +82,6 @@ const BettingInterface = () => {
   const bgColor = useColorModeValue("gray.100", "gray.700");
 
   const marketDetails = apiResponse ? parseClarityValue(apiResponse) : null;
-  const userPosition = apiResponse2 ? parseClarityValue(apiResponse2) : null;
 
   useEffect(() => {
     if (onChainId) {
@@ -113,6 +119,7 @@ const BettingInterface = () => {
 
     try {
       const response = await callReadOnlyFunction(options);
+      console.log("Fetch Market Details");
       console.log(response);
       setApiResponse(cvToString(response));
     } catch (err) {
@@ -184,16 +191,172 @@ const BettingInterface = () => {
       setError(error.message);
     }
   };
-  const handleTransaction = () => {
-    if (location.pathname.includes("/yes")) {
-      handleSwapStxToYes();
-    } else if (location.pathname.includes("/no")) {
-      handleSwapStxToNo();
+
+  const handleAddLiquidity = async () => {
+    if (!userData || !userData.profile) {
+      console.error("User not connected");
+      setError("Please connect your wallet first");
+      return;
+    }
+
+    const userAddress = userData.profile.stxAddress.testnet;
+
+    // Convert liquidityAmount to microSTX
+    const microStxAmount = parseInt(parseFloat(liquidityAmount) * 1000000);
+
+    // Add a buffer for potential additional costs
+    const bufferAmount = microStxAmount; // 100% buffer
+    const totalAmountWithBuffer = microStxAmount + bufferAmount;
+
+    const functionArgs = [
+      uintCV(onChainId), // market-id
+      uintCV(microStxAmount), // stx-amount in microSTX
+    ];
+
+    // Create a post-condition using the Pc helper
+    const postCondition = Pc.principal(userAddress)
+      .willSendLte(totalAmountWithBuffer)
+      .ustx();
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName: "add-liquidity",
+      functionArgs,
+      network: new StacksTestnet(),
+      postConditions: [postCondition],
+      postConditionMode: PostConditionMode.Deny,
+      onFinish: (data) => {
+        console.log("Transaction submitted:", data);
+        // Optionally refresh market details and user position here
+        fetchMarketDetails();
+        fetchUserPosition();
+      },
+      onCancel: () => {
+        console.log("Transaction canceled");
+      },
+    };
+
+    try {
+      await doContractCall(options);
+    } catch (error) {
+      console.error("Error calling contract:", error);
+      setError(error.message);
+    }
+  };
+
+  const handleLiquidityAmountChange = (event) => {
+    const value = event.target.value;
+    if (/^\d*\.?\d{0,6}$/.test(value) || value === "") {
+      setLiquidityAmount(value);
+    }
+  };
+
+  const handleSwapYesToStx = async () => {
+    if (!userData || !userData.profile) {
+      console.error("User not connected");
+      setError("Please connect your wallet first");
+      return;
+    }
+
+    const userAddress = userData.profile.stxAddress.testnet;
+
+    // Convert transactionAmount to microSTX
+    const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
+
+    const functionArgs = [
+      uintCV(onChainId), // market-id
+      uintCV(microTokenAmount), // yes-amount in microSTX
+    ];
+
+    // No need for post-condition on STX transfer, as the contract is sending STX to the user
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName: "swap-yes-to-stx",
+      functionArgs,
+      network: new StacksTestnet(),
+      postConditions: [],
+      postConditionMode: PostConditionMode.Allow,
+      onFinish: (data) => {
+        console.log("Transaction submitted:", data);
+      },
+      onCancel: () => {
+        console.log("Transaction canceled");
+      },
+    };
+
+    try {
+      await doContractCall(options);
+    } catch (error) {
+      console.error("Error calling contract:", error);
+      setError(error.message);
+    }
+  };
+
+  const handleSwapNoToStx = async () => {
+    if (!userData || !userData.profile) {
+      console.error("User not connected");
+      setError("Please connect your wallet first");
+      return;
+    }
+
+    const userAddress = userData.profile.stxAddress.testnet;
+
+    // Convert transactionAmount to microSTX
+    const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
+
+    const functionArgs = [
+      uintCV(onChainId), // market-id
+      uintCV(microTokenAmount), // no-amount in microSTX
+    ];
+
+    // No need for post-condition on STX transfer, as the contract is sending STX to the user
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName: "swap-no-to-stx",
+      functionArgs,
+      network: new StacksTestnet(),
+      postConditions: [],
+      postConditionMode: PostConditionMode.Allow,
+      onFinish: (data) => {
+        console.log("Transaction submitted:", data);
+      },
+      onCancel: () => {
+        console.log("Transaction canceled");
+      },
+    };
+
+    try {
+      await doContractCall(options);
+    } catch (error) {
+      console.error("Error calling contract:", error);
+      setError(error.message);
+    }
+  };
+
+  const handleTransaction = (action) => {
+    if (action === "buy") {
+      if (location.pathname.includes("/yes")) {
+        handleSwapStxToYes();
+      } else {
+        handleSwapStxToNo();
+      }
+    } else if (action === "sell") {
+      if (location.pathname.includes("/yes")) {
+        handleSwapYesToStx();
+      } else {
+        handleSwapNoToStx();
+      }
     } else {
       console.log("Unknown transaction type");
       setError("Unknown transaction type. Please try again.");
     }
   };
+
   const handleSwapStxToNo = async () => {
     if (!userData || !userData.profile) {
       console.error("User not connected");
@@ -245,10 +408,15 @@ const BettingInterface = () => {
   };
 
   const fetchUserPosition = async () => {
+    if (!userData || !userData.profile) {
+      console.log("User data is not available");
+      return;
+    }
     setIsLoading(true);
     const functionName = "get-user-position";
     const marketId = uintCV(onChainId);
-    const user = standardPrincipalCV(contractAddress);
+    const userAddress = userData.profile.stxAddress.testnet;
+    const user = standardPrincipalCV(userAddress);
     const network = new StacksTestnet();
 
     const options = {
@@ -257,15 +425,29 @@ const BettingInterface = () => {
       functionName,
       functionArgs: [marketId, user],
       network,
-      senderAddress: contractAddress,
+      senderAddress: userAddress,
     };
 
     try {
       const response = await callReadOnlyFunction(options);
-      console.log("Response:", response);
-      setApiResponse2(cvToString(response));
+      console.log("Fetch User Details");
+      console.log(response);
+
+      // Parse the response
+      if (response && response.value && response.value.data) {
+        const newUserPosition = {
+          no: Number(response.value.data.no.value) / 1000000,
+          yes: Number(response.value.data.yes.value) / 1000000,
+        };
+        console.log("Parsed User Position:", userPosition);
+        setUserPosition(newUserPosition); // Update the state
+      } else {
+        console.log("Unexpected response structure:", response);
+        setError("Unable to parse user position");
+      }
     } catch (err) {
       setError(err.message);
+      console.log("Error:", err.message);
     } finally {
       setIsLoading(false);
     }
@@ -332,6 +514,25 @@ const BettingInterface = () => {
           </CardHeader>
           <CardBody>
             <VStack spacing={4} align="stretch">
+              <Heading size="sm">Add Liquidity</Heading>
+              <HStack>
+                <InputGroup>
+                  <Input
+                    type="text"
+                    value={liquidityAmount}
+                    onChange={handleLiquidityAmountChange}
+                    placeholder="Enter amount"
+                  />
+                  <InputRightAddon children="STX" />
+                </InputGroup>
+                <Button
+                  onClick={handleAddLiquidity}
+                  colorScheme="purple"
+                  isDisabled={!liquidityAmount}
+                >
+                  Add Liquidity
+                </Button>
+              </HStack>
               <HStack justifyContent="space-between">
                 <Button
                   onClick={getContractOwner}
@@ -408,11 +609,11 @@ const BettingInterface = () => {
                   <SimpleGrid columns={2} spacing={4}>
                     <Stat>
                       <StatLabel>No</StatLabel>
-                      <StatNumber>{userPosition.no / 1000000} STX</StatNumber>
+                      <StatNumber>{userPosition.no.toFixed(6)} STX</StatNumber>
                     </Stat>
                     <Stat>
                       <StatLabel>Yes</StatLabel>
-                      <StatNumber>{userPosition.yes / 1000000} STX</StatNumber>
+                      <StatNumber>{userPosition.yes.toFixed(6)} STX</StatNumber>
                     </Stat>
                   </SimpleGrid>
                 </>
@@ -421,9 +622,10 @@ const BettingInterface = () => {
               <Divider />
 
               <Heading size="sm">
-                {location.pathname.includes("/yes") ? "Buy Yes" : "Sell No"}{" "}
+                {location.pathname.includes("/yes") ? "Buy Yes" : "Buy No"}{" "}
                 Tokens
               </Heading>
+              <Heading size="sm">Trade Tokens</Heading>
               <HStack>
                 <InputGroup>
                   <Input
@@ -435,16 +637,21 @@ const BettingInterface = () => {
                   <InputRightAddon children="STX" />
                 </InputGroup>
                 <Button
-                  onClick={handleTransaction}
-                  colorScheme={
-                    location.pathname.includes("/yes") ? "green" : "red"
-                  }
+                  onClick={() => handleTransaction("buy")}
+                  colorScheme="green"
                   isDisabled={!transactionAmount}
                 >
-                  {location.pathname.includes("/yes") ? "Buy" : "Sell"}
+                  Buy
                 </Button>
-                <Text>Estimated Slippage: {slippage}%</Text>
+                <Button
+                  onClick={() => handleTransaction("sell")}
+                  colorScheme="red"
+                  isDisabled={!transactionAmount}
+                >
+                  Sell
+                </Button>
               </HStack>
+              <Text>Estimated Slippage: {slippage}%</Text>
             </VStack>
           </CardBody>
         </Card>

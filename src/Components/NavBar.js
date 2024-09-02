@@ -75,10 +75,6 @@ const Navbar = () => {
           <WalletConnection />
         </Stack>
       </Flex>
-      <Text color="white" fontSize="xs">
-        Debug: Address: {userAddress || "Not connected"}, Admin:{" "}
-        {isAdmin ? "Yes" : "No"}
-      </Text>
     </Box>
   );
 };
