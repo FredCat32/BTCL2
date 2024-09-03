@@ -21,24 +21,18 @@ import {
   InputGroup,
   InputRightAddon,
 } from "@chakra-ui/react";
-import { hexToCV, cvToString, makeContractCall } from "@stacks/transactions";
 import {
-  cvToHex,
+  hexToCV,
+  cvToString,
   uintCV,
-  intCV,
-  makeStandardSTXPostCondition,
-  FungibleConditionCode,
   PostConditionMode,
   Pc,
-} from "@stacks/transactions";
-import { Cl, parseReadOnlyResponse } from "@stacks/transactions";
-import { StacksTestnet } from "@stacks/network";
-import {
   callReadOnlyFunction,
-  cvToJSON,
-  bufferCVFromString,
   standardPrincipalCV,
 } from "@stacks/transactions";
+import axios from "axios";
+
+import { StacksTestnet } from "@stacks/network";
 import { useConnect } from "@stacks/connect-react";
 import { useWallet } from "../WalletContext";
 
@@ -59,8 +53,11 @@ const BettingInterface = () => {
     }
     return null;
   };
-  const [liquidityAmount, setLiquidityAmount] = useState("");
+  const API_URL = process.env.REACT_APP_API_URL;
 
+  const [liquidityAmount, setLiquidityAmount] = useState("");
+  const [yesPool, setYesPool] = useState(location.state?.yesPool || 0);
+  const [noPool, setNoPool] = useState(location.state?.noPool || 0);
   const { doContractCall } = useConnect();
   const [apiResponse, setApiResponse] = useState(null);
   const [apiResponse2, setApiResponse2] = useState(null);
@@ -121,7 +118,43 @@ const BettingInterface = () => {
       const response = await callReadOnlyFunction(options);
       console.log("Fetch Market Details");
       console.log(response);
-      setApiResponse(cvToString(response));
+      const responseString = cvToString(response);
+      setApiResponse(responseString);
+
+      // Parse the response
+      const parsedResponse = parseClarityValue(responseString);
+
+      // Compare with initial state
+      if (parsedResponse) {
+        const newYesPool = parsedResponse["yes-pool"] / 1000000; // Convert to STX
+        const newNoPool = parsedResponse["no-pool"] / 1000000; // Convert to STX
+
+        if (newYesPool !== yesPool || newNoPool !== noPool) {
+          console.log("Pool values have changed. Updating backend...");
+
+          // Call your backend API to update the market
+          try {
+            const url = `${API_URL}/api/markets/${marketId}`;
+            const response = await axios.patch(url, {
+              yesPool: newYesPool,
+              noPool: newNoPool,
+            });
+
+            if (response.status !== 200) {
+              throw new Error("Failed to update market in backend");
+            }
+
+            console.log("Backend updated successfully");
+
+            // Update local state
+            setYesPool(newYesPool);
+            setNoPool(newNoPool);
+          } catch (error) {
+            console.error("Error updating backend:", error);
+            setError("Failed to update market data in backend");
+          }
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -183,7 +216,7 @@ const BettingInterface = () => {
         console.log("Transaction canceled");
       },
     };
-
+    console.log(options);
     try {
       await doContractCall(options);
     } catch (error) {
@@ -439,7 +472,7 @@ const BettingInterface = () => {
           no: Number(response.value.data.no.value) / 1000000,
           yes: Number(response.value.data.yes.value) / 1000000,
         };
-        console.log("Parsed User Position:", userPosition);
+        console.log("Parsed User Position:", newUserPosition); // Changed this line
         setUserPosition(newUserPosition); // Update the state
       } else {
         console.log("Unexpected response structure:", response);

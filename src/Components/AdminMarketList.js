@@ -9,13 +9,24 @@ import {
   Input,
   HStack,
   useToast,
+  Select,
 } from "@chakra-ui/react";
+import { uintCV, boolCV, PostConditionMode } from "@stacks/transactions";
+import { useConnect } from "@stacks/connect-react";
+import { useWallet } from "../WalletContext";
+import { StacksTestnet } from "@stacks/network";
+
 const API_URL = process.env.REACT_APP_API_URL;
+const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
+const contractName = process.env.REACT_APP_CONTRACT_NAME;
 
 const AdminMarketList = () => {
   const [markets, setMarkets] = useState([]);
   const [onChainIds, setOnChainIds] = useState({});
+  const [outcomes, setOutcomes] = useState({});
   const toast = useToast();
+  const { doContractCall } = useConnect();
+  const { userData } = useWallet();
 
   useEffect(() => {
     fetchMarkets();
@@ -26,10 +37,13 @@ const AdminMarketList = () => {
       const response = await axios.get(`${API_URL}/api/markets?all=true`);
       setMarkets(response.data);
       const initialOnChainIds = {};
+      const initialOutcomes = {};
       response.data.forEach((market) => {
         initialOnChainIds[market._id] = market.onChainId || "";
+        initialOutcomes[market._id] = "";
       });
       setOnChainIds(initialOnChainIds);
+      setOutcomes(initialOutcomes);
     } catch (error) {
       console.error("Error fetching markets:", error);
     }
@@ -37,10 +51,9 @@ const AdminMarketList = () => {
 
   const toggleMarketVisibility = async (marketId, currentVisibility) => {
     const url = `${API_URL}/api/markets/${marketId}`;
-
     console.log("Sending PATCH request to:", url);
     try {
-      await axios.patch(`${API_URL}/api/markets/${marketId}`, {
+      await axios.patch(url, {
         visible: !currentVisibility,
       });
       toast({
@@ -50,7 +63,7 @@ const AdminMarketList = () => {
         duration: 3000,
         isClosable: true,
       });
-      fetchMarkets(); // Refresh the list
+      fetchMarkets();
     } catch (error) {
       console.error("Error updating market visibility:", error);
       toast({
@@ -74,13 +87,26 @@ const AdminMarketList = () => {
         }
       );
       console.log("Update response:", response.data);
-      // ... rest of your function
+      toast({
+        title: "Success",
+        description: "On-chain ID updated successfully",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+      fetchMarkets();
     } catch (error) {
       console.error(
         "Error updating on-chain ID:",
         error.response ? error.response.data : error.message
       );
-      // ... error handling
+      toast({
+        title: "Error",
+        description: "Failed to update on-chain ID",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -88,6 +114,104 @@ const AdminMarketList = () => {
     setOnChainIds((prev) => ({ ...prev, [marketId]: value }));
   };
 
+  const handleOutcomeChange = (marketId, value) => {
+    setOutcomes((prev) => ({ ...prev, [marketId]: value }));
+  };
+
+  const resolveMarket = async (marketId) => {
+    console.log("Resolving market:", marketId);
+
+    if (!userData || !userData.profile) {
+      console.log("User not connected");
+      toast({
+        title: "Error",
+        description: "Please connect your wallet first",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    const userAddress = userData.profile.stxAddress.testnet;
+    console.log("User address:", userAddress);
+
+    const functionArgs = [
+      uintCV(onChainIds[marketId]), // market-id
+      boolCV(false), // Hardcoded to true for testing
+    ];
+    console.log("Function args:", functionArgs);
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName: "resolve-market",
+      functionArgs,
+      network: new StacksTestnet(),
+      postConditionMode: PostConditionMode.Allow,
+      onFinish: async (data) => {
+        console.log("Transaction submitted:", data);
+        toast({
+          title: "Transaction Submitted",
+          description: `Market resolution transaction submitted. Transaction ID: ${data.txId}`,
+          status: "info",
+          duration: 5000,
+          isClosable: true,
+        });
+
+        try {
+          await axios.post(`${API_URL}/api/markets/${marketId}/resolve`, {
+            outcome: true, // Hardcoded to true
+            txId: data.txId,
+          });
+          toast({
+            title: "Backend Updated",
+            description: "Market resolution recorded in backend",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
+          fetchMarkets();
+        } catch (error) {
+          console.error("Error updating backend:", error);
+          toast({
+            title: "Backend Update Failed",
+            description: "Failed to record market resolution in backend",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+        }
+      },
+      onCancel: () => {
+        console.log("Transaction canceled");
+        toast({
+          title: "Transaction Cancelled",
+          description: "Market resolution transaction was cancelled",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
+        });
+      },
+    };
+
+    console.log("Contract call options:", options);
+
+    try {
+      console.log("Attempting to call contract...");
+      await doContractCall(options);
+      console.log("Contract call initiated successfully");
+    } catch (error) {
+      console.error("Error calling contract:", error);
+      toast({
+        title: "Error",
+        description: `Failed to resolve market: ${error.message}`,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
   return (
     <Box maxWidth="800px" margin="auto">
       <Heading mb={4}>Admin Market List</Heading>
@@ -119,6 +243,25 @@ const AdminMarketList = () => {
             >
               {market.visible ? "Hide Market" : "Show Market"}
             </Button>
+            <HStack mt={2}>
+              <Select
+                placeholder="Select outcome"
+                value={outcomes[market._id]}
+                onChange={(e) =>
+                  handleOutcomeChange(market._id, e.target.value)
+                }
+              >
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </Select>
+              <Button
+                onClick={() => resolveMarket(market._id)}
+                colorScheme="purple"
+                isDisabled={!outcomes[market._id] || !onChainIds[market._id]}
+              >
+                Resolve Market
+              </Button>
+            </HStack>
           </Box>
         ))}
       </VStack>
