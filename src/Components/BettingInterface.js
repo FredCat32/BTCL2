@@ -4,27 +4,33 @@ import {
   Box,
   VStack,
   HStack,
-  Button,
-  Text,
-  Heading,
-  Divider,
-  Spinner,
-  useColorModeValue,
   Card,
   CardHeader,
   CardBody,
+  Heading,
+  Button,
+  Input,
+  InputGroup,
+  InputRightAddon,
+  Text,
+  Divider,
   SimpleGrid,
   Stat,
   StatLabel,
   StatNumber,
-  Input,
-  InputGroup,
-  InputRightAddon,
+  Spinner,
+  Slider,
+  SliderTrack,
+  SliderFilledTrack,
+  SliderThumb,
+  useToast,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import {
   hexToCV,
   cvToString,
   uintCV,
+  boolCV,
   PostConditionMode,
   Pc,
   callReadOnlyFunction,
@@ -38,6 +44,7 @@ import { useWallet } from "../WalletContext";
 
 const BettingInterface = () => {
   const location = useLocation();
+  const toast = useToast();
   const { market, marketId, onChainId } = location.state || {};
   const { userData } = useWallet();
 
@@ -54,6 +61,8 @@ const BettingInterface = () => {
     return null;
   };
   const API_URL = process.env.REACT_APP_API_URL;
+  const [removeLiquidityPercentage, setRemoveLiquidityPercentage] =
+    useState(50);
 
   const [liquidityAmount, setLiquidityAmount] = useState("");
   const [yesPool, setYesPool] = useState(location.state?.yesPool || 0);
@@ -75,6 +84,14 @@ const BettingInterface = () => {
   const contractName = "market8";
   const apiEndpoint = "https://stacks-node-api.testnet.stacks.co";
   const [slippage, setSlippage] = useState(0);
+  const isResolved = (marketDetails) => {
+    console.log(marketDetails.value);
+    console.log(marketDetails.resolved === 3);
+    return marketDetails.resolved === 3;
+  };
+  const userHasPosition = (userPosition) => {
+    return userPosition && (userPosition.yes > 0 || userPosition.no > 0);
+  };
 
   const bgColor = useColorModeValue("gray.100", "gray.700");
 
@@ -219,8 +236,14 @@ const BettingInterface = () => {
     console.log(options);
     try {
       await doContractCall(options);
+      showTransactionToast(
+        "Buy Yes",
+        "Success",
+        "Successfully bought Yes tokens"
+      );
     } catch (error) {
       console.error("Error calling contract:", error);
+      showTransactionToast("Buy Yes", "Error", error.message);
       setError(error.message);
     }
   };
@@ -231,6 +254,7 @@ const BettingInterface = () => {
       setError("Please connect your wallet first");
       return;
     }
+    showTransactionToast("Add Liquidity", "Pending", "Transaction submitted");
 
     const userAddress = userData.profile.stxAddress.testnet;
 
@@ -272,8 +296,14 @@ const BettingInterface = () => {
 
     try {
       await doContractCall(options);
+      showTransactionToast(
+        "Add Liquidity",
+        "Success",
+        "Liquidity added successfully"
+      );
     } catch (error) {
       console.error("Error calling contract:", error);
+      showTransactionToast("Add Liquidity", "Error", error.message);
       setError(error.message);
     }
   };
@@ -282,6 +312,66 @@ const BettingInterface = () => {
     const value = event.target.value;
     if (/^\d*\.?\d{0,6}$/.test(value) || value === "") {
       setLiquidityAmount(value);
+    }
+  };
+  const handleRemoveLiquidityPercentageChange = (value) => {
+    setRemoveLiquidityPercentage(value);
+  };
+  const handleRemoveLiquidity = async () => {
+    if (!userData || !userData.profile) {
+      console.error("User not connected");
+      setError("Please connect your wallet first");
+      return;
+    }
+    showTransactionToast(
+      "Remove Liquidity",
+      "Pending",
+      "Transaction submitted"
+    );
+
+    const userAddress = userData.profile.stxAddress.testnet;
+
+    // Calculate the amount of liquidity to remove based on the user's total position and the selected percentage
+    const totalUserLiquidity = userPosition.yes + userPosition.no;
+    const liquidityToRemove =
+      (totalUserLiquidity * removeLiquidityPercentage) / 100;
+
+    // Convert liquidityToRemove to microSTX
+    const microStxAmount = Math.floor(liquidityToRemove * 1000000);
+
+    const functionArgs = [
+      uintCV(onChainId), // market-id
+      uintCV(microStxAmount), // stx-amount in microSTX
+    ];
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName: "remove-liquidity",
+      functionArgs,
+      network: new StacksTestnet(),
+      postConditionMode: PostConditionMode.Allow,
+      onFinish: (data) => {
+        console.log("Transaction submitted:", data);
+        fetchMarketDetails();
+        fetchUserPosition();
+      },
+      onCancel: () => {
+        console.log("Transaction canceled");
+      },
+    };
+
+    try {
+      await doContractCall(options);
+      showTransactionToast(
+        "Remove Liquidity",
+        "Success",
+        "Liquidity removed successfully"
+      );
+    } catch (error) {
+      console.error("Error calling contract:", error);
+      setError(error.message);
+      showTransactionToast("Remove Liquidity", "Error", error.message);
     }
   };
 
@@ -322,9 +412,15 @@ const BettingInterface = () => {
 
     try {
       await doContractCall(options);
+      showTransactionToast(
+        "Buy Yes",
+        "Success",
+        "Successfully bought Yes tokens"
+      );
     } catch (error) {
       console.error("Error calling contract:", error);
       setError(error.message);
+      showTransactionToast("Buy Yes", "Error", error.message);
     }
   };
 
@@ -365,9 +461,15 @@ const BettingInterface = () => {
 
     try {
       await doContractCall(options);
+      showTransactionToast(
+        "Buy No",
+        "Success",
+        "Successfully bought No tokens"
+      );
     } catch (error) {
       console.error("Error calling contract:", error);
       setError(error.message);
+      showTransactionToast("Buy No", "Error", error.message);
     }
   };
 
@@ -394,6 +496,7 @@ const BettingInterface = () => {
     if (!userData || !userData.profile) {
       console.error("User not connected");
       setError("Please connect your wallet first");
+
       return;
     }
 
@@ -434,9 +537,15 @@ const BettingInterface = () => {
 
     try {
       await doContractCall(options);
+      showTransactionToast(
+        "Buy No",
+        "Success",
+        "Successfully bought No tokens"
+      );
     } catch (error) {
       console.error("Error calling contract:", error);
       setError(error.message);
+      showTransactionToast("Buy No", "Error", error.message);
     }
   };
 
@@ -485,7 +594,30 @@ const BettingInterface = () => {
       setIsLoading(false);
     }
   };
+  const showTransactionToast = (type, status, message) => {
+    let toastStatus;
+    switch (status.toLowerCase()) {
+      case "pending":
+        toastStatus = "info";
+        break;
+      case "success":
+        toastStatus = "success";
+        break;
+      case "error":
+        toastStatus = "error";
+        break;
+      default:
+        toastStatus = "info";
+    }
 
+    toast({
+      title: `${type} Transaction ${status}`,
+      description: message,
+      status: toastStatus,
+      duration: 5000,
+      isClosable: true,
+    });
+  };
   const getContractOwner = async () => {
     setIsLoading(true);
     setError(null);
@@ -535,7 +667,56 @@ const BettingInterface = () => {
       setTransactionAmount(value);
     }
   };
+  const handleClaimWinnings = async () => {
+    if (!userData || !userData.profile) {
+      console.error("User not connected");
+      setError("Please connect your wallet first");
+      return;
+    }
 
+    showTransactionToast("Claim Winnings", "Pending", "Transaction submitted");
+
+    const userAddress = userData.profile.stxAddress.testnet;
+
+    const functionArgs = [
+      uintCV(onChainId), // market-id
+    ];
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName: "claim-winnings",
+      functionArgs,
+      network: new StacksTestnet(),
+      postConditionMode: PostConditionMode.Allow,
+      onFinish: (data) => {
+        console.log("Transaction submitted:", data);
+        showTransactionToast(
+          "Claim Winnings",
+          "Success",
+          "Winnings claimed successfully"
+        );
+        fetchMarketDetails();
+        fetchUserPosition();
+      },
+      onCancel: () => {
+        console.log("Transaction canceled");
+        showTransactionToast(
+          "Claim Winnings",
+          "Cancelled",
+          "Transaction was cancelled"
+        );
+      },
+    };
+
+    try {
+      await doContractCall(options);
+    } catch (error) {
+      console.error("Error calling contract:", error);
+      setError(error.message);
+      showTransactionToast("Claim Winnings", "Error", error.message);
+    }
+  };
   return (
     <Box maxWidth="600px" margin="auto" p={6}>
       <VStack spacing={6} align="stretch">
@@ -566,6 +747,37 @@ const BettingInterface = () => {
                   Add Liquidity
                 </Button>
               </HStack>
+              {userPosition && userPosition.yes > 0 && userPosition.no > 0 && (
+                <>
+                  <Heading size="sm">Remove Liquidity</Heading>
+                  <Text>Select percentage of liquidity to remove:</Text>
+                  <Slider
+                    value={removeLiquidityPercentage}
+                    onChange={handleRemoveLiquidityPercentageChange}
+                    min={0}
+                    max={100}
+                    step={1}
+                  >
+                    <SliderTrack>
+                      <SliderFilledTrack />
+                    </SliderTrack>
+                    <SliderThumb />
+                  </Slider>
+                  <Text>{removeLiquidityPercentage}%</Text>
+                  <Text>
+                    Amount to remove:{" "}
+                    {(
+                      ((userPosition.yes + userPosition.no) *
+                        removeLiquidityPercentage) /
+                      100
+                    ).toFixed(6)}{" "}
+                    STX
+                  </Text>
+                  <Button onClick={handleRemoveLiquidity} colorScheme="orange">
+                    Remove Liquidity
+                  </Button>
+                </>
+              )}
               <HStack justifyContent="space-between">
                 <Button
                   onClick={getContractOwner}
@@ -621,15 +833,19 @@ const BettingInterface = () => {
                       </StatNumber>
                     </Stat>
                     <Stat>
-                      <StatLabel>Outcome</StatLabel>
-                      <StatNumber>{marketDetails.outcome}</StatNumber>
-                    </Stat>
-                    <Stat>
                       <StatLabel>Resolved</StatLabel>
                       <StatNumber>
-                        {marketDetails.resolved.toString()}
+                        {isResolved(marketDetails) ? "Yes" : "No"}
                       </StatNumber>
                     </Stat>
+                    {isResolved(marketDetails) && (
+                      <Stat>
+                        <StatLabel>Outcome</StatLabel>
+                        <StatNumber>
+                          {marketDetails.outcome ? "Yes" : "No"}
+                        </StatNumber>
+                      </Stat>
+                    )}
                   </SimpleGrid>
                 </>
               )}
@@ -652,12 +868,20 @@ const BettingInterface = () => {
                 </>
               )}
 
-              <Divider />
+              {marketDetails &&
+                isResolved(marketDetails) &&
+                userHasPosition(userPosition) && (
+                  <Button
+                    onClick={handleClaimWinnings}
+                    colorScheme="green"
+                    size="lg"
+                    width="100%"
+                    mt={4}
+                  >
+                    Claim Winnings
+                  </Button>
+                )}
 
-              <Heading size="sm">
-                {location.pathname.includes("/yes") ? "Buy Yes" : "Buy No"}{" "}
-                Tokens
-              </Heading>
               <Heading size="sm">Trade Tokens</Heading>
               <HStack>
                 <InputGroup>
@@ -666,25 +890,34 @@ const BettingInterface = () => {
                     value={transactionAmount}
                     onChange={handleAmountChange}
                     placeholder="Enter amount"
+                    isDisabled={marketDetails && isResolved(marketDetails)}
                   />
                   <InputRightAddon children="STX" />
                 </InputGroup>
                 <Button
                   onClick={() => handleTransaction("buy")}
                   colorScheme="green"
-                  isDisabled={!transactionAmount}
+                  isDisabled={
+                    !transactionAmount ||
+                    (marketDetails && isResolved(marketDetails))
+                  }
                 >
                   Buy
                 </Button>
                 <Button
                   onClick={() => handleTransaction("sell")}
                   colorScheme="red"
-                  isDisabled={!transactionAmount}
+                  isDisabled={
+                    !transactionAmount ||
+                    (marketDetails && isResolved(marketDetails))
+                  }
                 >
                   Sell
                 </Button>
               </HStack>
-              <Text>Estimated Slippage: {slippage}%</Text>
+              {marketDetails && !isResolved(marketDetails) && (
+                <Text>Estimated Slippage: {slippage}%</Text>
+              )}
             </VStack>
           </CardBody>
         </Card>
