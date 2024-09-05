@@ -23,6 +23,7 @@ import {
   SliderTrack,
   SliderFilledTrack,
   SliderThumb,
+  StatHelpText,
   useToast,
   useColorModeValue,
 } from "@chakra-ui/react";
@@ -35,6 +36,7 @@ import {
   Pc,
   callReadOnlyFunction,
   standardPrincipalCV,
+  cvToValue,
 } from "@stacks/transactions";
 import axios from "axios";
 
@@ -47,7 +49,6 @@ const BettingInterface = () => {
   const toast = useToast();
   const { market, marketId, onChainId } = location.state || {};
   const { userData } = useWallet();
-
   const parseClarityValue = (clarityString) => {
     const match = clarityString.match(/\(ok \(tuple (.*)\)\)/);
     if (match) {
@@ -68,6 +69,8 @@ const BettingInterface = () => {
   const [yesPool, setYesPool] = useState(location.state?.yesPool || 0);
   const [noPool, setNoPool] = useState(location.state?.noPool || 0);
   const { doContractCall } = useConnect();
+  const [resolution, setResolution] = useState("");
+  const [outcome, setOutcome] = useState("");
   const [apiResponse, setApiResponse] = useState(null);
   const [apiResponse2, setApiResponse2] = useState(null);
   const [decodedOwner, setDecodedOwner] = useState(null);
@@ -84,18 +87,21 @@ const BettingInterface = () => {
   const contractName = "market8";
   const apiEndpoint = "https://stacks-node-api.testnet.stacks.co";
   const [slippage, setSlippage] = useState(0);
+
+  const calculateEstimatedValue = (tokenAmount, poolSize, totalLiquidity) => {
+    return (tokenAmount * totalLiquidity) / poolSize;
+  };
   const isResolved = (marketDetails) => {
-    console.log(marketDetails.value);
-    console.log(marketDetails.resolved === 3);
-    return marketDetails.resolved === 3;
+    if (!marketDetails) return false;
+    return marketDetails.resolved === "true";
   };
   const userHasPosition = (userPosition) => {
     return userPosition && (userPosition.yes > 0 || userPosition.no > 0);
   };
 
-  const bgColor = useColorModeValue("gray.100", "gray.700");
-
   const marketDetails = apiResponse ? parseClarityValue(apiResponse) : null;
+  console.log(marketDetails);
+  console.log(marketDetails);
 
   useEffect(() => {
     if (onChainId) {
@@ -143,6 +149,14 @@ const BettingInterface = () => {
 
       // Compare with initial state
       if (parsedResponse) {
+        const parsedOutcome = cvToValue(response.value.data.outcome.value);
+        console.log(parsedOutcome);
+        setOutcome(parsedOutcome);
+
+        const parsedResolve = cvToValue(response.value.data.resolved);
+        console.log(parsedResolve);
+        setResolution(parsedResolve);
+
         const newYesPool = parsedResponse["yes-pool"] / 1000000; // Convert to STX
         const newNoPool = parsedResponse["no-pool"] / 1000000; // Convert to STX
 
@@ -771,7 +785,22 @@ const BettingInterface = () => {
                         removeLiquidityPercentage) /
                       100
                     ).toFixed(6)}{" "}
-                    STX
+                    Tokens (Est.{" "}
+                    {(
+                      ((calculateEstimatedValue(
+                        userPosition.yes,
+                        marketDetails["yes-pool"],
+                        marketDetails["total-liquidity"]
+                      ) +
+                        calculateEstimatedValue(
+                          userPosition.no,
+                          marketDetails["no-pool"],
+                          marketDetails["total-liquidity"]
+                        )) *
+                        removeLiquidityPercentage) /
+                      100
+                    ).toFixed(6)}{" "}
+                    STX)
                   </Text>
                   <Button onClick={handleRemoveLiquidity} colorScheme="orange">
                     Remove Liquidity
@@ -809,7 +838,6 @@ const BettingInterface = () => {
               )}
 
               <Divider />
-
               {marketDetails && (
                 <>
                   <Heading size="sm">Market Details</Heading>
@@ -817,14 +845,22 @@ const BettingInterface = () => {
                     <Stat>
                       <StatLabel>No Pool</StatLabel>
                       <StatNumber>
-                        {marketDetails["no-pool"] / 1000000} STX
+                        {marketDetails["no-pool"] / 1000000} Tokens
                       </StatNumber>
+                      <StatHelpText>
+                        Est. Value:{" "}
+                        {(marketDetails["no-pool"] / 1000000).toFixed(6)} STX
+                      </StatHelpText>
                     </Stat>
                     <Stat>
                       <StatLabel>Yes Pool</StatLabel>
                       <StatNumber>
-                        {marketDetails["yes-pool"] / 1000000} STX
+                        {marketDetails["yes-pool"] / 1000000} Tokens
                       </StatNumber>
+                      <StatHelpText>
+                        Est. Value:{" "}
+                        {(marketDetails["yes-pool"] / 1000000).toFixed(6)} STX
+                      </StatHelpText>
                     </Stat>
                     <Stat>
                       <StatLabel>Total Liquidity</StatLabel>
@@ -835,14 +871,14 @@ const BettingInterface = () => {
                     <Stat>
                       <StatLabel>Resolved</StatLabel>
                       <StatNumber>
-                        {isResolved(marketDetails) ? "Yes" : "No"}
+                        {resolution === true ? "Yes" : "No"}
                       </StatNumber>
                     </Stat>
                     {isResolved(marketDetails) && (
                       <Stat>
                         <StatLabel>Outcome</StatLabel>
                         <StatNumber>
-                          {marketDetails.outcome ? "Yes" : "No"}
+                          {outcome === true ? "Yes" : "No"}
                         </StatNumber>
                       </Stat>
                     )}
@@ -850,19 +886,37 @@ const BettingInterface = () => {
                 </>
               )}
 
-              {userPosition && (
+              {userPosition && marketDetails && (
                 <>
                   <Heading size="sm" mt={4}>
                     Your Position
                   </Heading>
                   <SimpleGrid columns={2} spacing={4}>
                     <Stat>
-                      <StatLabel>No</StatLabel>
-                      <StatNumber>{userPosition.no.toFixed(6)} STX</StatNumber>
+                      <StatLabel>No Tokens</StatLabel>
+                      <StatNumber>{userPosition.no.toFixed(6)}</StatNumber>
+                      <StatHelpText>
+                        Est. Value:{" "}
+                        {calculateEstimatedValue(
+                          userPosition.no,
+                          marketDetails["no-pool"],
+                          marketDetails["total-liquidity"]
+                        ).toFixed(6)}{" "}
+                        STX
+                      </StatHelpText>
                     </Stat>
                     <Stat>
-                      <StatLabel>Yes</StatLabel>
-                      <StatNumber>{userPosition.yes.toFixed(6)} STX</StatNumber>
+                      <StatLabel>Yes Tokens</StatLabel>
+                      <StatNumber>{userPosition.yes.toFixed(6)}</StatNumber>
+                      <StatHelpText>
+                        Est. Value:{" "}
+                        {calculateEstimatedValue(
+                          userPosition.yes,
+                          marketDetails["yes-pool"],
+                          marketDetails["total-liquidity"]
+                        ).toFixed(6)}{" "}
+                        STX
+                      </StatHelpText>
                     </Stat>
                   </SimpleGrid>
                 </>
@@ -889,10 +943,9 @@ const BettingInterface = () => {
                     type="text"
                     value={transactionAmount}
                     onChange={handleAmountChange}
-                    placeholder="Enter amount"
+                    placeholder="Enter Token amount"
                     isDisabled={marketDetails && isResolved(marketDetails)}
                   />
-                  <InputRightAddon children="STX" />
                 </InputGroup>
                 <Button
                   onClick={() => handleTransaction("buy")}
@@ -902,7 +955,7 @@ const BettingInterface = () => {
                     (marketDetails && isResolved(marketDetails))
                   }
                 >
-                  Buy
+                  Buy {location.pathname.includes("/yes") ? "Yes" : "No"} Tokens
                 </Button>
                 <Button
                   onClick={() => handleTransaction("sell")}
@@ -912,7 +965,8 @@ const BettingInterface = () => {
                     (marketDetails && isResolved(marketDetails))
                   }
                 >
-                  Sell
+                  Sell {location.pathname.includes("/yes") ? "Yes" : "No"}{" "}
+                  Tokens
                 </Button>
               </HStack>
               {marketDetails && !isResolved(marketDetails) && (
