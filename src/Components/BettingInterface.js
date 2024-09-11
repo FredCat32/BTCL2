@@ -47,7 +47,8 @@ import { useWallet } from "../WalletContext";
 const BettingInterface = () => {
   const location = useLocation();
   const toast = useToast();
-  const { market, marketId, onChainId } = location.state || {};
+  const { market = {}, marketId, onChainId } = location.state || {};
+
   const { userData } = useWallet();
   const parseClarityValue = (clarityString) => {
     const match = clarityString.match(/\(ok \(tuple (.*)\)\)/);
@@ -78,11 +79,7 @@ const BettingInterface = () => {
   const [userPosition, setUserPosition] = useState({ no: 0, yes: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [transactionAmount, setTransactionAmount] = useState("");
-  useEffect(() => {
-    if (userData && userData.profile) {
-      fetchUserPosition();
-    }
-  }, [userData]);
+
   const contractAddress = "ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C";
   const contractName = "market8";
   const apiEndpoint = "https://stacks-node-api.testnet.stacks.co";
@@ -141,53 +138,70 @@ const BettingInterface = () => {
       const response = await callReadOnlyFunction(options);
       console.log("Fetch Market Details");
       console.log(response);
-      const responseString = cvToString(response);
-      setApiResponse(responseString);
 
-      // Parse the response
-      const parsedResponse = parseClarityValue(responseString);
+      // Check if response is defined and has the expected structure
+      if (response && response.value && response.value.data) {
+        const responseString = cvToString(response);
+        setApiResponse(responseString);
 
-      // Compare with initial state
-      if (parsedResponse) {
-        const parsedOutcome = cvToValue(response.value.data.outcome.value);
-        console.log(parsedOutcome);
-        setOutcome(parsedOutcome);
+        // Parse the response
+        const parsedResponse = parseClarityValue(responseString);
 
-        const parsedResolve = cvToValue(response.value.data.resolved);
-        console.log(parsedResolve);
-        setResolution(parsedResolve);
-
-        const newYesPool = parsedResponse["yes-pool"] / 1000000; // Convert to STX
-        const newNoPool = parsedResponse["no-pool"] / 1000000; // Convert to STX
-
-        if (newYesPool !== yesPool || newNoPool !== noPool) {
-          console.log("Pool values have changed. Updating backend...");
-
-          // Call your backend API to update the market
-          try {
-            const url = `${API_URL}/api/markets/${marketId}`;
-            const response = await axios.patch(url, {
-              yesPool: newYesPool,
-              noPool: newNoPool,
-            });
-
-            if (response.status !== 200) {
-              throw new Error("Failed to update market in backend");
-            }
-
-            console.log("Backend updated successfully");
-
-            // Update local state
-            setYesPool(newYesPool);
-            setNoPool(newNoPool);
-          } catch (error) {
-            console.error("Error updating backend:", error);
-            setError("Failed to update market data in backend");
+        if (parsedResponse) {
+          // Use optional chaining and provide default values
+          const outcomeValue = response.value.data.outcome?.value;
+          if (outcomeValue !== undefined) {
+            const parsedOutcome = cvToValue(outcomeValue);
+            console.log("Parsed Outcome:", parsedOutcome);
+            setOutcome(parsedOutcome);
+          } else {
+            console.log("Outcome value is undefined");
           }
+
+          const resolvedValue = response.value.data.resolved;
+          if (resolvedValue !== undefined) {
+            const parsedResolve = cvToValue(resolvedValue);
+            console.log("Parsed Resolve:", parsedResolve);
+            setResolution(parsedResolve);
+          } else {
+            console.log("Resolved value is undefined");
+          }
+          const newYesPool = (parsedResponse["yes-pool"] ?? 0) / 1000000; // Convert to STX
+          const newNoPool = (parsedResponse["no-pool"] ?? 0) / 1000000; // Convert to STX
+
+          if (newYesPool !== yesPool || newNoPool !== noPool) {
+            console.log("Pool values have changed. Updating backend...");
+
+            try {
+              const url = `${API_URL}/api/markets/${marketId}`;
+              const backendResponse = await axios.patch(url, {
+                yesPool: newYesPool,
+                noPool: newNoPool,
+              });
+
+              if (backendResponse.status !== 200) {
+                throw new Error("Failed to update market in backend");
+              }
+
+              console.log("Backend updated successfully");
+
+              // Update local state
+              setYesPool(newYesPool);
+              setNoPool(newNoPool);
+            } catch (error) {
+              console.error("Error updating backend:", error);
+              setError("Failed to update market data in backend");
+            }
+          }
+        } else {
+          throw new Error("Failed to parse response");
         }
+      } else {
+        throw new Error("Invalid response structure");
       }
     } catch (err) {
       setError(err.message);
+      console.error("Error in fetchMarketDetails:", err);
     } finally {
       setIsLoading(false);
     }
