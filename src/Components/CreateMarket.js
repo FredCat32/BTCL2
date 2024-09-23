@@ -44,8 +44,8 @@ const CreateMarket = () => {
     setIsSubmitting(true);
     try {
       const network = new StacksTestnet(); // Use StacksMainnet for production
-      const contractAddress = "ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C";
-      const contractName = "market8";
+      const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
+      const contractName = process.env.REACT_APP_CONTRACT_NAME;
       const functionName = "create-market";
       const functionArgs = [
         uintCV(initialLiquidity * 1000000), // Convert to micro-STX
