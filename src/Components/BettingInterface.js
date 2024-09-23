@@ -80,8 +80,8 @@ const BettingInterface = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [transactionAmount, setTransactionAmount] = useState("");
 
-  const contractAddress = "ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C";
-  const contractName = "market8";
+  const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
+  const contractName = process.env.REACT_APP_CONTRACT_NAME;
   const apiEndpoint = "https://stacks-node-api.testnet.stacks.co";
   const [slippage, setSlippage] = useState(0);
 
