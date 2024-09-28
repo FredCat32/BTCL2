@@ -18,13 +18,13 @@ import theme from "./theme";
 
 // Admin check function
 export const isAdmin = (userAddress) => {
-  const adminAddresses = ["ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C"]; // Your admin address
+  const adminAddresses = ["SP1EJ799Q4EJ511FP9C7J71ESA4920QJV7CQHGA61"]; // Your admin address
   return adminAddresses.includes(userAddress);
 };
 
 const ProtectedAdminRoute = ({ children }) => {
   const { userData } = useWallet();
-  const userAddress = "ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C";
+  const userAddress = "SP1EJ799Q4EJ511FP9C7J71ESA4920QJV7CQHGA61";
 
   if (!isAdmin(userAddress)) {
     return <Navigate to="/" replace />;
