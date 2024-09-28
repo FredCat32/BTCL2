@@ -40,7 +40,7 @@ import {
 } from "@stacks/transactions";
 import axios from "axios";
 
-import { StacksTestnet } from "@stacks/network";
+import { StacksMainnet } from "@stacks/network";
 import { useConnect } from "@stacks/connect-react";
 import { useWallet } from "../WalletContext";
 
@@ -82,7 +82,7 @@ const BettingInterface = () => {
 
   const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
   const contractName = process.env.REACT_APP_CONTRACT_NAME;
-  const apiEndpoint = "https://stacks-node-api.testnet.stacks.co";
+  const apiEndpoint = "https://stacks-node-api.mainnet.stacks.co";
   const [slippage, setSlippage] = useState(0);
 
   const calculateEstimatedValue = (tokenAmount, poolSize, totalLiquidity) => {
@@ -123,7 +123,7 @@ const BettingInterface = () => {
     setIsLoading(true);
     const functionName = "get-market-details";
     const tokenId = uintCV(onChainId);
-    const network = new StacksTestnet();
+    const network = new StacksMainnet();
 
     const options = {
       contractAddress,
@@ -227,7 +227,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.testnet; // or .testnet if you're using testnet
+    const userAddress = userData.profile.stxAddress.mainnet;
 
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
@@ -251,7 +251,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "swap-stx-to-yes",
       functionArgs,
-      network: new StacksTestnet(),
+      network: new StacksMainnet(),
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
@@ -284,7 +284,7 @@ const BettingInterface = () => {
     }
     showTransactionToast("Add Liquidity", "Pending", "Transaction submitted");
 
-    const userAddress = userData.profile.stxAddress.testnet;
+    const userAddress = userData.profile.stxAddress.mainnet;
 
     // Convert liquidityAmount to microSTX
     const microStxAmount = parseInt(parseFloat(liquidityAmount) * 1000000);
@@ -308,7 +308,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "add-liquidity",
       functionArgs,
-      network: new StacksTestnet(),
+      network: new StacksMainnet(),
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
@@ -357,7 +357,7 @@ const BettingInterface = () => {
       "Transaction submitted"
     );
 
-    const userAddress = userData.profile.stxAddress.testnet;
+    const userAddress = userData.profile.stxAddress.mainnet;
 
     // Calculate the amount of liquidity to remove based on the user's total position and the selected percentage
     const totalUserLiquidity = userPosition.yes + userPosition.no;
@@ -377,7 +377,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "remove-liquidity",
       functionArgs,
-      network: new StacksTestnet(),
+      network: new StacksMainnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
         console.log("Transaction submitted:", data);
@@ -410,7 +410,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.testnet;
+    const userAddress = userData.profile.stxAddress.mainnet;
 
     // Convert transactionAmount to microSTX
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
@@ -427,7 +427,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "swap-yes-to-stx",
       functionArgs,
-      network: new StacksTestnet(),
+      network: new StacksMainnet(),
       postConditions: [],
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
@@ -459,7 +459,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.testnet;
+    const userAddress = userData.profile.stxAddress.mainnet;
 
     // Convert transactionAmount to microSTX
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
@@ -476,7 +476,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "swap-no-to-stx",
       functionArgs,
-      network: new StacksTestnet(),
+      network: new StacksMainnet(),
       postConditions: [],
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
@@ -528,7 +528,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.testnet; // Changed to testnet
+    const userAddress = userData.profile.stxAddress.mainnet;
 
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
@@ -552,7 +552,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "swap-stx-to-no",
       functionArgs,
-      network: new StacksTestnet(),
+      network: new StacksMainnet(),
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
@@ -585,9 +585,9 @@ const BettingInterface = () => {
     setIsLoading(true);
     const functionName = "get-user-position";
     const marketId = uintCV(onChainId);
-    const userAddress = userData.profile.stxAddress.testnet;
+    const userAddress = userData.profile.stxAddress.mainnet;
     const user = standardPrincipalCV(userAddress);
-    const network = new StacksTestnet();
+    const network = new StacksMainnet();
 
     const options = {
       contractAddress,
@@ -704,7 +704,7 @@ const BettingInterface = () => {
 
     showTransactionToast("Claim Winnings", "Pending", "Transaction submitted");
 
-    const userAddress = userData.profile.stxAddress.testnet;
+    const userAddress = userData.profile.stxAddress.mainnet;
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -715,7 +715,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "claim-winnings",
       functionArgs,
-      network: new StacksTestnet(),
+      network: new StacksMainnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
         console.log("Transaction submitted:", data);
