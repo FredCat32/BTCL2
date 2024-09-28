@@ -14,7 +14,7 @@ import {
 import { uintCV, boolCV, PostConditionMode } from "@stacks/transactions";
 import { useConnect } from "@stacks/connect-react";
 import { useWallet } from "../WalletContext";
-import { StacksTestnet } from "@stacks/network";
+import { StacksMainnet } from "@stacks/network";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
@@ -133,7 +133,7 @@ const AdminMarketList = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.testnet;
+    const userAddress = userData.profile.stxAddress.StacksMainnet;
     console.log("User address:", userAddress);
 
     const functionArgs = [
@@ -147,23 +147,31 @@ const AdminMarketList = () => {
       contractName,
       functionName: "resolve-market",
       functionArgs,
-      network: new StacksTestnet(),
+      network: new StacksMainnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: async (data) => {
         console.log("Transaction submitted:", data);
-        toast({
-          title: "Transaction Submitted",
-          description: `Market resolution transaction submitted. Transaction ID: ${data.txId}`,
-          status: "info",
-          duration: 5000,
-          isClosable: true,
-        });
-
         try {
-          await axios.post(`${API_URL}/api/markets/${marketId}/resolve`, {
-            outcome: true, // Hardcoded to true
-            txId: data.txId,
+          // Show transaction submitted toast
+          toast({
+            title: "Transaction Submitted",
+            description: `Market resolution transaction submitted. Transaction ID: ${data.txId}`,
+            status: "info",
+            duration: 5000,
+            isClosable: true,
           });
+
+          // Update backend
+          const response = await axios.post(
+            `${API_URL}/api/markets/${marketId}/resolve`,
+            {
+              outcome: true, // Hardcoded to true
+              txId: data.txId,
+            }
+          );
+          console.log("Backend update response:", response);
+
+          // Show success toast
           toast({
             title: "Backend Updated",
             description: "Market resolution recorded in backend",
@@ -171,14 +179,17 @@ const AdminMarketList = () => {
             duration: 3000,
             isClosable: true,
           });
-          fetchMarkets();
+
+          // Fetch updated markets
+          await fetchMarkets();
         } catch (error) {
-          console.error("Error updating backend:", error);
+          console.error("Error in onFinish:", error);
           toast({
-            title: "Backend Update Failed",
-            description: "Failed to record market resolution in backend",
+            title: "Error",
+            description:
+              error.message || "An error occurred during market resolution",
             status: "error",
-            duration: 3000,
+            duration: 5000,
             isClosable: true,
           });
         }
