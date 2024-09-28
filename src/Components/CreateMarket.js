@@ -17,7 +17,7 @@ import { useConnect } from "@stacks/connect-react";
 import { StacksMainnet } from "@stacks/network";
 import { uintCV } from "@stacks/transactions";
 import { PostConditionMode } from "@stacks/transactions";
-import { uintCV, stringAsciiCV } from "@stacks/transactions";
+import { stringAsciiCV } from "@stacks/transactions";
 
 const CreateMarket = () => {
   const [question, setQuestion] = useState("");
