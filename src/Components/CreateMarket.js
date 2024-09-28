@@ -86,7 +86,7 @@ const CreateMarket = () => {
         },
       });
     } catch (error) {
-      console.error("Error creating market:", error);
+      console.error("Error creating market :", error);
       toast({
         title: "Error",
         description: "Failed to create market",
