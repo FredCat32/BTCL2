@@ -17,6 +17,7 @@ import { useConnect } from "@stacks/connect-react";
 import { StacksMainnet } from "@stacks/network";
 import { uintCV } from "@stacks/transactions";
 import { PostConditionMode } from "@stacks/transactions";
+import { uintCV, stringAsciiCV } from "@stacks/transactions";
 
 const CreateMarket = () => {
   const [question, setQuestion] = useState("");
@@ -30,6 +31,10 @@ const CreateMarket = () => {
   const API_URL = process.env.REACT_APP_API_URL;
 
   const createMarket = async () => {
+    console.log(API_URL);
+    console.log(question);
+    console.log(feePercentage);
+    console.log();
     if (!question.trim()) {
       toast({
         title: "Error",
@@ -48,9 +53,10 @@ const CreateMarket = () => {
       const contractName = process.env.REACT_APP_CONTRACT_NAME;
       const functionName = "create-market";
       const functionArgs = [
-        uintCV(initialLiquidity * 1000000), // Convert to micro-STX
-        uintCV(yesPercentage * 100), // Convert to basis points
-        uintCV(feePercentage * 100), // Convert to basis points
+        uintCV(initialLiquidity * 1000000),
+        uintCV(yesPercentage * 100),
+        uintCV(feePercentage * 100),
+        stringAsciiCV(question.slice(0, 50)),
       ];
 
       await doContractCall({
