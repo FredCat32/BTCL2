@@ -206,6 +206,62 @@ const BettingInterface = () => {
       setIsLoading(false);
     }
   };
+
+  const claimLPWinnings = async () => {
+    if (!userData || !userData.profile) {
+      console.error("User not connected");
+      setError("Please connect your wallet first");
+      return;
+    }
+    setIsLoading(true);
+    showTransactionToast(
+      "Claim LP Winnings",
+      "Pending",
+      "Transaction submitted"
+    );
+
+    const functionName = "claim-lp-winnings";
+    const marketId = uintCV(onChainId);
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName,
+      functionArgs: [marketId],
+      network: new StacksMainnet(),
+      postConditionMode: PostConditionMode.Allow,
+      onFinish: (data) => {
+        console.log("Transaction submitted:", data);
+        showTransactionToast(
+          "Claim LP Winnings",
+          "Success",
+          "Successfully claimed LP winnings"
+        );
+        setIsLoading(false);
+        // Optionally refresh market details and user position here
+        fetchMarketDetails();
+        fetchUserPosition();
+      },
+      onCancel: () => {
+        console.log("Transaction canceled");
+        showTransactionToast(
+          "Claim LP Winnings",
+          "Cancelled",
+          "Transaction was cancelled"
+        );
+        setIsLoading(false);
+      },
+    };
+
+    try {
+      await doContractCall(options);
+    } catch (error) {
+      console.error("Error claiming LP winnings:", error);
+      setIsLoading(false);
+      setError(error.message);
+      showTransactionToast("Claim LP Winnings", "Error", error.message);
+    }
+  };
   const calculateSlippage = (amount, poolSize, totalLiquidity) => {
     const constantProduct = poolSize * totalLiquidity;
     const newPoolSize = poolSize + parseFloat(amount);
@@ -823,11 +879,11 @@ const BettingInterface = () => {
               )}
               <HStack justifyContent="space-between">
                 <Button
-                  onClick={getContractOwner}
+                  onClick={claimLPWinnings}
                   isLoading={isLoading}
                   colorScheme="blue"
                 >
-                  Get Contract Owner
+                  Claim LP Winnings
                 </Button>
                 {onChainId && (
                   <Text fontWeight="bold">On-chain ID: {onChainId}</Text>
