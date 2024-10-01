@@ -288,7 +288,7 @@ const BettingInterface = () => {
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 0.99; // Allows up to 1% slippage
+    const slippageTolerance = 0.92; // Allows up to 1% slippage
 
     const estimatedYesTokens = calculateEstimatedValue(
       microStxAmount,
