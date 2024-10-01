@@ -481,27 +481,21 @@ const BettingInterface = () => {
     // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    // Calculate estimated STX to receive
+    const slippageTolerance = 1.99; // 1% slippage tolerance
+
     const estimatedStxAmount = calculateEstimatedValue(
       microTokenAmount,
       marketDetails["yes-pool"],
       marketDetails["total-liquidity"]
     );
 
-    // Apply slippage tolerance (e.g., 1% slippage tolerance)
-    const slippageTolerance = 0.99; // 1% slippage tolerance
     const minStxAmount = Math.floor(estimatedStxAmount * slippageTolerance);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
       uintCV(microTokenAmount), // yes-amount in microTokens
-      uintCV(minStxAmount), // min-stx-amount
+      uintCV(minStxAmount),
     ];
-
-    // Create a post-condition to ensure the user has enough YES tokens
-    const postCondition = Pc.principal(userAddress)
-      .willSendLte(microTokenAmount)
-      .fungible(marketDetails["yes-token"]);
 
     const options = {
       contractAddress,
@@ -509,8 +503,8 @@ const BettingInterface = () => {
       functionName: "swap-yes-to-stx",
       functionArgs,
       network: new StacksMainnet(),
-      postConditions: [postCondition],
-      postConditionMode: PostConditionMode.Deny,
+      postConditions: [],
+      postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
         console.log("Transaction submitted:", data);
       },
@@ -518,9 +512,7 @@ const BettingInterface = () => {
         console.log("Transaction canceled");
       },
     };
-
-    console.log("Contract call options:", options);
-
+    console.log(options);
     try {
       await doContractCall(options);
       showTransactionToast(
@@ -530,8 +522,8 @@ const BettingInterface = () => {
       );
     } catch (error) {
       console.error("Error calling contract:", error);
-      setError(error.message);
       showTransactionToast("Sell Yes", "Error", error.message);
+      setError(error.message);
     }
   };
 
@@ -547,27 +539,21 @@ const BettingInterface = () => {
     // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    // Calculate estimated STX to receive
+    const slippageTolerance = 1.99; // 1% slippage tolerance
+
     const estimatedStxAmount = calculateEstimatedValue(
       microTokenAmount,
       marketDetails["no-pool"],
       marketDetails["total-liquidity"]
     );
 
-    // Apply slippage tolerance (e.g., 1% slippage tolerance)
-    const slippageTolerance = 0.99; // 1% slippage tolerance
     const minStxAmount = Math.floor(estimatedStxAmount * slippageTolerance);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
       uintCV(microTokenAmount), // no-amount in microTokens
-      uintCV(minStxAmount), // min-stx-amount
+      uintCV(minStxAmount),
     ];
-
-    // Create a post-condition to ensure the user has enough NO tokens
-    const postCondition = Pc.principal(userAddress)
-      .willSendLte(microTokenAmount)
-      .fungible(marketDetails["no-token"]);
 
     const options = {
       contractAddress,
@@ -575,8 +561,8 @@ const BettingInterface = () => {
       functionName: "swap-no-to-stx",
       functionArgs,
       network: new StacksMainnet(),
-      postConditions: [postCondition],
-      postConditionMode: PostConditionMode.Deny,
+      postConditions: [],
+      postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
         console.log("Transaction submitted:", data);
       },
@@ -584,19 +570,16 @@ const BettingInterface = () => {
         console.log("Transaction canceled");
       },
     };
-
-    console.log("Contract call options:", options);
-
+    console.log(options);
     try {
       await doContractCall(options);
       showTransactionToast("Sell No", "Success", "Successfully sold No tokens");
     } catch (error) {
       console.error("Error calling contract:", error);
-      setError(error.message);
       showTransactionToast("Sell No", "Error", error.message);
+      setError(error.message);
     }
   };
-
   const handleTransaction = (action) => {
     if (action === "buy") {
       if (location.pathname.includes("/yes")) {
