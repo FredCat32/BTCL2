@@ -88,6 +88,29 @@ const BettingInterface = () => {
   const calculateEstimatedValue = (tokenAmount, poolSize, totalLiquidity) => {
     return (tokenAmount * totalLiquidity) / poolSize;
   };
+
+  const calculateEstimatedYesAmount = (
+    stxAmount,
+    yesPool,
+    noPool,
+    feeNumerator
+  ) => {
+    const feeDenominator = 10000;
+    const feeMultiplier = feeDenominator - feeNumerator;
+
+    // Net STX amount after fee
+    const netStxAmount = Math.floor(
+      (stxAmount * feeMultiplier) / feeDenominator
+    );
+
+    // Calculate YES tokens to give to user
+    const numerator = netStxAmount * noPool;
+    const denominator = yesPool + netStxAmount;
+    const yesAmount = Math.floor(numerator / denominator);
+
+    return yesAmount;
+  };
+
   const isResolved = (marketDetails) => {
     if (!marketDetails) return false;
     return marketDetails.resolved === "true";
@@ -288,18 +311,19 @@ const BettingInterface = () => {
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 0.92; // Allows up to 1% slippage
+    const slippageTolerance = 0.99; // Allows up to 1% slippage
 
-    const estimatedYesTokens = calculateEstimatedValue(
+    const estimatedYesTokens = calculateEstimatedYesAmount(
       microStxAmount,
       marketDetails["yes-pool"],
-      marketDetails["total-liquidity"]
+      marketDetails["no-pool"],
+      marketDetails["fee-numerator"]
     );
 
     const minYesAmount = Math.floor(estimatedYesTokens * slippageTolerance);
 
     // Add a buffer for potential additional costs (e.g., fees, contract behavior)
-    const bufferAmount = microStxAmount; // 100% buffer
+    const bufferAmount = 0;
     const totalAmountWithBuffer = microStxAmount + bufferAmount;
 
     const functionArgs = [
@@ -310,7 +334,7 @@ const BettingInterface = () => {
 
     // Create a post-condition using the Pc helper
     const postCondition = Pc.principal(userAddress)
-      .willSendLte(totalAmountWithBuffer)
+      .willSendEq(microStxAmount)
       .ustx();
 
     const options = {
