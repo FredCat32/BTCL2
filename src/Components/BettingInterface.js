@@ -469,7 +469,6 @@ const BettingInterface = () => {
       showTransactionToast("Remove Liquidity", "Error", error.message);
     }
   };
-
   const handleSwapYesToStx = async () => {
     if (!userData || !userData.profile) {
       console.error("User not connected");
@@ -479,15 +478,30 @@ const BettingInterface = () => {
 
     const userAddress = userData.profile.stxAddress.mainnet;
 
-    // Convert transactionAmount to microSTX
+    // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
+
+    // Calculate estimated STX to receive
+    const estimatedStxAmount = calculateEstimatedValue(
+      microTokenAmount,
+      marketDetails["yes-pool"],
+      marketDetails["total-liquidity"]
+    );
+
+    // Apply slippage tolerance (e.g., 1% slippage tolerance)
+    const slippageTolerance = 0.99; // 1% slippage tolerance
+    const minStxAmount = Math.floor(estimatedStxAmount * slippageTolerance);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
-      uintCV(microTokenAmount), // yes-amount in microSTX
+      uintCV(microTokenAmount), // yes-amount in microTokens
+      uintCV(minStxAmount), // min-stx-amount
     ];
 
-    // No need for post-condition on STX transfer, as the contract is sending STX to the user
+    // Create a post-condition to ensure the user has enough YES tokens
+    const postCondition = Pc.principal(userAddress)
+      .willSendLte(microTokenAmount)
+      .fungible(marketDetails["yes-token"]);
 
     const options = {
       contractAddress,
@@ -495,8 +509,8 @@ const BettingInterface = () => {
       functionName: "swap-yes-to-stx",
       functionArgs,
       network: new StacksMainnet(),
-      postConditions: [],
-      postConditionMode: PostConditionMode.Allow,
+      postConditions: [postCondition],
+      postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
         console.log("Transaction submitted:", data);
       },
@@ -505,17 +519,19 @@ const BettingInterface = () => {
       },
     };
 
+    console.log("Contract call options:", options);
+
     try {
       await doContractCall(options);
       showTransactionToast(
-        "Buy Yes",
+        "Sell Yes",
         "Success",
-        "Successfully bought Yes tokens"
+        "Successfully sold Yes tokens"
       );
     } catch (error) {
       console.error("Error calling contract:", error);
       setError(error.message);
-      showTransactionToast("Buy Yes", "Error", error.message);
+      showTransactionToast("Sell Yes", "Error", error.message);
     }
   };
 
@@ -528,15 +544,30 @@ const BettingInterface = () => {
 
     const userAddress = userData.profile.stxAddress.mainnet;
 
-    // Convert transactionAmount to microSTX
+    // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
+
+    // Calculate estimated STX to receive
+    const estimatedStxAmount = calculateEstimatedValue(
+      microTokenAmount,
+      marketDetails["no-pool"],
+      marketDetails["total-liquidity"]
+    );
+
+    // Apply slippage tolerance (e.g., 1% slippage tolerance)
+    const slippageTolerance = 0.99; // 1% slippage tolerance
+    const minStxAmount = Math.floor(estimatedStxAmount * slippageTolerance);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
-      uintCV(microTokenAmount), // no-amount in microSTX
+      uintCV(microTokenAmount), // no-amount in microTokens
+      uintCV(minStxAmount), // min-stx-amount
     ];
 
-    // No need for post-condition on STX transfer, as the contract is sending STX to the user
+    // Create a post-condition to ensure the user has enough NO tokens
+    const postCondition = Pc.principal(userAddress)
+      .willSendLte(microTokenAmount)
+      .fungible(marketDetails["no-token"]);
 
     const options = {
       contractAddress,
@@ -544,8 +575,8 @@ const BettingInterface = () => {
       functionName: "swap-no-to-stx",
       functionArgs,
       network: new StacksMainnet(),
-      postConditions: [],
-      postConditionMode: PostConditionMode.Allow,
+      postConditions: [postCondition],
+      postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
         console.log("Transaction submitted:", data);
       },
@@ -554,17 +585,15 @@ const BettingInterface = () => {
       },
     };
 
+    console.log("Contract call options:", options);
+
     try {
       await doContractCall(options);
-      showTransactionToast(
-        "Buy No",
-        "Success",
-        "Successfully bought No tokens"
-      );
+      showTransactionToast("Sell No", "Success", "Successfully sold No tokens");
     } catch (error) {
       console.error("Error calling contract:", error);
       setError(error.message);
-      showTransactionToast("Buy No", "Error", error.message);
+      showTransactionToast("Sell No", "Error", error.message);
     }
   };
 
