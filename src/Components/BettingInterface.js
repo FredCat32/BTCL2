@@ -288,7 +288,7 @@ const BettingInterface = () => {
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 1.99; // 1% slippage tolerance
+    const slippageTolerance = 0.99; // Allows up to 1% slippage
 
     const estimatedYesTokens = calculateEstimatedValue(
       microStxAmount,
@@ -481,7 +481,7 @@ const BettingInterface = () => {
     // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 1.99; // 1% slippage tolerance
+    const slippageTolerance = 0.99; // 1% slippage tolerance
 
     const estimatedStxAmount = calculateEstimatedValue(
       microTokenAmount,
@@ -539,7 +539,7 @@ const BettingInterface = () => {
     // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 1.99; // 1% slippage tolerance
+    const slippageTolerance = 0.99; // 1% slippage tolerance
 
     const estimatedStxAmount = calculateEstimatedValue(
       microTokenAmount,
@@ -612,7 +612,7 @@ const BettingInterface = () => {
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 1.99; // 1% slippage tolerance
+    const slippageTolerance = 0.99; // 1% slippage tolerance
 
     const estimatedNoTokens = calculateEstimatedValue(
       microStxAmount,
