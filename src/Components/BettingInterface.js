@@ -288,7 +288,7 @@ const BettingInterface = () => {
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 0.99; // 1% slippage tolerance
+    const slippageTolerance = 1.99; // 1% slippage tolerance
 
     const estimatedYesTokens = calculateEstimatedValue(
       microStxAmount,
@@ -369,7 +369,7 @@ const BettingInterface = () => {
     const postCondition = Pc.principal(userAddress)
       .willSendLte(totalAmountWithBuffer)
       .ustx();
-
+    //push
     const options = {
       contractAddress,
       contractName,
@@ -600,6 +600,16 @@ const BettingInterface = () => {
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
+    const slippageTolerance = 1.99; // 1% slippage tolerance
+
+    const estimatedNoTokens = calculateEstimatedValue(
+      microStxAmount,
+      marketDetails["no-pool"],
+      marketDetails["total-liquidity"]
+    );
+
+    const minNoAmount = Math.floor(estimatedNoTokens * slippageTolerance);
+
     // Add a buffer for potential additional costs (e.g., fees, contract behavior)
     const bufferAmount = microStxAmount; // 100% buffer
     const totalAmountWithBuffer = microStxAmount + bufferAmount;
@@ -607,6 +617,7 @@ const BettingInterface = () => {
     const functionArgs = [
       uintCV(onChainId), // market-id
       uintCV(microStxAmount), // stx-amount in microSTX
+      uintCV(minNoAmount),
     ];
 
     // Create a post-condition using the Pc helper
