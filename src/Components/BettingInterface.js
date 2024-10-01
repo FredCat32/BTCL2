@@ -289,6 +289,7 @@ const BettingInterface = () => {
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
     const slippageTolerance = 0.99; // 1% slippage tolerance
+
     const estimatedYesTokens = calculateEstimatedValue(
       microStxAmount,
       marketDetails["yes-pool"],
@@ -358,7 +359,7 @@ const BettingInterface = () => {
     // Add a buffer for potential additional costs
     const bufferAmount = microStxAmount; // 100% buffer
     const totalAmountWithBuffer = microStxAmount + bufferAmount;
-
+    //push
     const functionArgs = [
       uintCV(onChainId), // market-id
       uintCV(microStxAmount), // stx-amount in microSTX
