@@ -13,13 +13,11 @@ const Navbar = () => {
   console.log(isAdmin);
   console.log(userAddress);
 
-  const navItems = [
-    { name: "Home", path: "/" },
-    { name: "Create Market", path: "/create" },
-  ];
+  const navItems = [{ name: "Home", path: "/" }, {}];
 
   if (isAdmin) {
     navItems.push({ name: "Admin", path: "/admin/markets" });
+    navItems.push({ name: "Create Market", path: "/create" });
   }
 
   return (
