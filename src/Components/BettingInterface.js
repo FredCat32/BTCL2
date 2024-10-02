@@ -88,6 +88,64 @@ const BettingInterface = () => {
   const calculateEstimatedValue = (tokenAmount, poolSize, totalLiquidity) => {
     return (tokenAmount * totalLiquidity) / poolSize;
   };
+  const calculateEstimatedStxFromYes = (yesAmount, yesPool, noPool) => {
+    const feeDenominator = 10000;
+    const feeNumerator = 100; // 1% fee
+    const feeMultiplier = feeDenominator - feeNumerator;
+
+    // New YES pool after user adds yesAmount
+    const newYesPool = yesPool + yesAmount;
+
+    // Calculate STX amount to give to user before fee
+    const numerator = yesAmount * noPool;
+    const denominator = newYesPool;
+    const stxAmountBeforeFee = Math.floor(numerator / denominator);
+
+    // Apply fee
+    const stxAmount = Math.floor(
+      (stxAmountBeforeFee * feeMultiplier) / feeDenominator
+    );
+
+    return stxAmount;
+  };
+  const calculateEstimatedNoAmount = (stxAmount, yesPool, noPool) => {
+    const feeDenominator = 10000;
+    const feeNumerator = 100; // Hardcoded 1% fee
+    const feeMultiplier = feeDenominator - feeNumerator;
+
+    // Net STX amount after fee
+    const netStxAmount = Math.floor(
+      (stxAmount * feeMultiplier) / feeDenominator
+    );
+
+    // Calculate NO tokens to give to user
+    const numerator = netStxAmount * yesPool;
+    const denominator = noPool + netStxAmount;
+    const noAmount = Math.floor(numerator / denominator);
+
+    return noAmount;
+  };
+
+  const calculateEstimatedStxFromNo = (noAmount, yesPool, noPool) => {
+    const feeDenominator = 10000;
+    const feeNumerator = 100; // 1% fee
+    const feeMultiplier = feeDenominator - feeNumerator;
+
+    // New NO pool after user adds noAmount
+    const newNoPool = noPool + noAmount;
+
+    // Calculate STX amount to give to user before fee
+    const numerator = noAmount * yesPool;
+    const denominator = newNoPool;
+    const stxAmountBeforeFee = Math.floor(numerator / denominator);
+
+    // Apply fee
+    const stxAmount = Math.floor(
+      (stxAmountBeforeFee * feeMultiplier) / feeDenominator
+    );
+
+    return stxAmount;
+  };
 
   const calculateEstimatedYesAmount = (stxAmount, yesPool, noPool) => {
     const feeDenominator = 10000;
@@ -524,15 +582,43 @@ const BettingInterface = () => {
     // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 0.99; // 1% slippage tolerance
+    // Ensure microTokenAmount is an integer
+    if (!Number.isInteger(microTokenAmount)) {
+      console.error("microTokenAmount is not an integer:", microTokenAmount);
+      setError("Invalid token amount. Please enter a valid number.");
+      return;
+    }
 
-    const estimatedStxAmount = calculateEstimatedValue(
+    const slippageTolerance = 0.99; // Accept up to 1% slippage
+
+    // Use the updated estimation function with hardcoded fee
+    const estimatedStxAmount = calculateEstimatedStxFromYes(
       microTokenAmount,
       marketDetails["yes-pool"],
-      marketDetails["total-liquidity"]
+      marketDetails["no-pool"]
     );
 
+    // Ensure estimatedStxAmount is a number
+    if (isNaN(estimatedStxAmount)) {
+      console.error("estimatedStxAmount is NaN");
+      setError("Failed to estimate STX amount. Please try again.");
+      return;
+    }
+
     const minStxAmount = Math.floor(estimatedStxAmount * slippageTolerance);
+
+    // Ensure minStxAmount is an integer
+    if (!Number.isInteger(minStxAmount)) {
+      console.error("minStxAmount is not an integer:", minStxAmount);
+      setError("Invalid minimum STX amount. Please try again.");
+      return;
+    }
+
+    // Log values for debugging
+    console.log("microTokenAmount:", microTokenAmount);
+    console.log("estimatedStxAmount:", estimatedStxAmount);
+    console.log("minStxAmount:", minStxAmount);
+    console.log("Market Details:", marketDetails);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -569,7 +655,6 @@ const BettingInterface = () => {
       setError(error.message);
     }
   };
-
   const handleSwapNoToStx = async () => {
     if (!userData || !userData.profile) {
       console.error("User not connected");
@@ -582,15 +667,43 @@ const BettingInterface = () => {
     // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 0.99; // 1% slippage tolerance
+    // Ensure microTokenAmount is an integer
+    if (!Number.isInteger(microTokenAmount)) {
+      console.error("microTokenAmount is not an integer:", microTokenAmount);
+      setError("Invalid token amount. Please enter a valid number.");
+      return;
+    }
 
-    const estimatedStxAmount = calculateEstimatedValue(
+    const slippageTolerance = 0.99; // Accept up to 1% slippage
+
+    // Use the updated estimation function with hardcoded fee
+    const estimatedStxAmount = calculateEstimatedStxFromNo(
       microTokenAmount,
-      marketDetails["no-pool"],
-      marketDetails["total-liquidity"]
+      marketDetails["yes-pool"],
+      marketDetails["no-pool"]
     );
 
+    // Ensure estimatedStxAmount is a number
+    if (isNaN(estimatedStxAmount)) {
+      console.error("estimatedStxAmount is NaN");
+      setError("Failed to estimate STX amount. Please try again.");
+      return;
+    }
+
     const minStxAmount = Math.floor(estimatedStxAmount * slippageTolerance);
+
+    // Ensure minStxAmount is an integer
+    if (!Number.isInteger(minStxAmount)) {
+      console.error("minStxAmount is not an integer:", minStxAmount);
+      setError("Invalid minimum STX amount. Please try again.");
+      return;
+    }
+
+    // Log values for debugging
+    console.log("microTokenAmount:", microTokenAmount);
+    console.log("estimatedStxAmount:", estimatedStxAmount);
+    console.log("minStxAmount:", minStxAmount);
+    console.log("Market Details:", marketDetails);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -623,30 +736,11 @@ const BettingInterface = () => {
       setError(error.message);
     }
   };
-  const handleTransaction = (action) => {
-    if (action === "buy") {
-      if (location.pathname.includes("/yes")) {
-        handleSwapStxToYes();
-      } else {
-        handleSwapStxToNo();
-      }
-    } else if (action === "sell") {
-      if (location.pathname.includes("/yes")) {
-        handleSwapYesToStx();
-      } else {
-        handleSwapNoToStx();
-      }
-    } else {
-      console.log("Unknown transaction type");
-      setError("Unknown transaction type. Please try again.");
-    }
-  };
 
   const handleSwapStxToNo = async () => {
     if (!userData || !userData.profile) {
       console.error("User not connected");
       setError("Please connect your wallet first");
-
       return;
     }
 
@@ -655,19 +749,43 @@ const BettingInterface = () => {
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 0.99; // 1% slippage tolerance
+    // Ensure microStxAmount is an integer
+    if (!Number.isInteger(microStxAmount)) {
+      console.error("microStxAmount is not an integer:", microStxAmount);
+      setError("Invalid STX amount. Please enter a valid number.");
+      return;
+    }
 
-    const estimatedNoTokens = calculateEstimatedValue(
+    const slippageTolerance = 0.99; // Accept up to 1% slippage
+
+    // Use the updated estimation function with hardcoded fee
+    const estimatedNoTokens = calculateEstimatedNoAmount(
       microStxAmount,
-      marketDetails["no-pool"],
-      marketDetails["total-liquidity"]
+      marketDetails["yes-pool"],
+      marketDetails["no-pool"]
     );
+
+    // Ensure estimatedNoTokens is a number
+    if (isNaN(estimatedNoTokens)) {
+      console.error("estimatedNoTokens is NaN");
+      setError("Failed to estimate NO tokens. Please try again.");
+      return;
+    }
 
     const minNoAmount = Math.floor(estimatedNoTokens * slippageTolerance);
 
-    // Add a buffer for potential additional costs (e.g., fees, contract behavior)
-    const bufferAmount = microStxAmount; // 100% buffer
-    const totalAmountWithBuffer = microStxAmount + bufferAmount;
+    // Ensure minNoAmount is an integer
+    if (!Number.isInteger(minNoAmount)) {
+      console.error("minNoAmount is not an integer:", minNoAmount);
+      setError("Invalid minimum NO amount. Please try again.");
+      return;
+    }
+
+    // Log values for debugging
+    console.log("microStxAmount:", microStxAmount);
+    console.log("estimatedNoTokens:", estimatedNoTokens);
+    console.log("minNoAmount:", minNoAmount);
+    console.log("Market Details:", marketDetails);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -677,7 +795,7 @@ const BettingInterface = () => {
 
     // Create a post-condition using the Pc helper
     const postCondition = Pc.principal(userAddress)
-      .willSendLte(totalAmountWithBuffer)
+      .willSendEq(microStxAmount)
       .ustx();
 
     const options = {
@@ -707,6 +825,25 @@ const BettingInterface = () => {
       console.error("Error calling contract:", error);
       setError(error.message);
       showTransactionToast("Buy No", "Error", error.message);
+    }
+  };
+
+  const handleTransaction = (action) => {
+    if (action === "buy") {
+      if (location.pathname.includes("/yes")) {
+        handleSwapStxToYes();
+      } else {
+        handleSwapStxToNo();
+      }
+    } else if (action === "sell") {
+      if (location.pathname.includes("/yes")) {
+        handleSwapYesToStx();
+      } else {
+        handleSwapNoToStx();
+      }
+    } else {
+      console.log("Unknown transaction type");
+      setError("Unknown transaction type. Please try again.");
     }
   };
 
