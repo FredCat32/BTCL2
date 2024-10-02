@@ -319,9 +319,12 @@ const BettingInterface = () => {
       marketDetails["no-pool"],
       marketDetails["fee-numerator"]
     );
+    const estimatedYesTokensInt = Math.floor(estimatedYesTokens);
 
-    const minYesAmount = Math.floor(estimatedYesTokens * slippageTolerance);
-
+    const minYesAmount = Math.floor(estimatedYesTokensInt * slippageTolerance);
+    console.log("microStxAmount:", microStxAmount);
+    console.log("estimatedYesTokens:", estimatedYesTokens);
+    console.log("minYesAmount:", minYesAmount);
     // Add a buffer for potential additional costs (e.g., fees, contract behavior)
     const bufferAmount = 0;
     const totalAmountWithBuffer = microStxAmount + bufferAmount;
