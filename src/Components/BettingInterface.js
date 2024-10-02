@@ -89,13 +89,9 @@ const BettingInterface = () => {
     return (tokenAmount * totalLiquidity) / poolSize;
   };
 
-  const calculateEstimatedYesAmount = (
-    stxAmount,
-    yesPool,
-    noPool,
-    feeNumerator
-  ) => {
+  const calculateEstimatedYesAmount = (stxAmount, yesPool, noPool) => {
     const feeDenominator = 10000;
+    const feeNumerator = 100; // Hardcoded 1% fee
     const feeMultiplier = feeDenominator - feeNumerator;
 
     // Net STX amount after fee
@@ -311,23 +307,43 @@ const BettingInterface = () => {
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
 
-    const slippageTolerance = 0.99; // Allows up to 1% slippage
+    // Ensure microStxAmount is an integer
+    if (!Number.isInteger(microStxAmount)) {
+      console.error("microStxAmount is not an integer:", microStxAmount);
+      setError("Invalid STX amount. Please enter a valid number.");
+      return;
+    }
 
+    const slippageTolerance = 0.99; // Accept up to 1% slippage
+
+    // Use the updated estimation function with hardcoded fee
     const estimatedYesTokens = calculateEstimatedYesAmount(
       microStxAmount,
       marketDetails["yes-pool"],
-      marketDetails["no-pool"],
-      marketDetails["fee-numerator"]
+      marketDetails["no-pool"]
     );
-    const estimatedYesTokensInt = Math.floor(estimatedYesTokens);
 
-    const minYesAmount = Math.floor(estimatedYesTokensInt * slippageTolerance);
+    // Ensure estimatedYesTokens is a number
+    if (isNaN(estimatedYesTokens)) {
+      console.error("estimatedYesTokens is NaN");
+      setError("Failed to estimate YES tokens. Please try again.");
+      return;
+    }
+
+    const minYesAmount = Math.floor(estimatedYesTokens * slippageTolerance);
+
+    // Ensure minYesAmount is an integer
+    if (!Number.isInteger(minYesAmount)) {
+      console.error("minYesAmount is not an integer:", minYesAmount);
+      setError("Invalid minimum YES amount. Please try again.");
+      return;
+    }
+
+    // Log values for debugging
     console.log("microStxAmount:", microStxAmount);
     console.log("estimatedYesTokens:", estimatedYesTokens);
     console.log("minYesAmount:", minYesAmount);
-    // Add a buffer for potential additional costs (e.g., fees, contract behavior)
-    const bufferAmount = 0;
-    const totalAmountWithBuffer = microStxAmount + bufferAmount;
+    console.log("Market Details:", marketDetails);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -355,7 +371,7 @@ const BettingInterface = () => {
         console.log("Transaction canceled");
       },
     };
-    console.log(options);
+
     try {
       await doContractCall(options);
       showTransactionToast(
