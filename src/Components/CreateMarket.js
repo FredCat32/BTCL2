@@ -57,7 +57,7 @@ const CreateMarket = () => {
         uintCV(initialLiquidity * 1000000),
         uintCV(yesPercentage * 100),
         uintCV(feePercentage * 100),
-        stringAsciiCV("Test question for debugging purposes"),
+        stringAsciiCV(question),
       ];
 
       await doContractCall({

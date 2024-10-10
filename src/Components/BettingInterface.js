@@ -113,12 +113,17 @@ const BettingInterface = () => {
   const fetchMarketDetailsFromBackend = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/markets/${marketId}`);
-      console.log("Notes Response:" + response.data.notes);
+      console.log("Full market details response:", response.data);
       if (response.data && response.data.notes) {
-        setMarketNotes("Testing");
+        console.log("Notes from response:", response.data.notes);
+        setMarketNotes(response.data.notes);
+      } else {
+        console.log("No notes found in the response");
+        setMarketNotes(""); // Set to empty string if no notes are found
       }
     } catch (error) {
       console.error("Error fetching market details from backend:", error);
+      setMarketNotes(""); // Set to empty string in case of error
     }
   };
   const calculateEstimatedNoAmount = (stxAmount, yesPool, noPool) => {
