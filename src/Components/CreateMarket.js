@@ -25,6 +25,7 @@ const CreateMarket = () => {
   const [yesPercentage, setYesPercentage] = useState(50);
   const [feePercentage, setFeePercentage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notes, setNotes] = useState("");
   const [txId, setTxId] = useState(null);
   const toast = useToast();
   const { doContractCall } = useConnect();
@@ -113,6 +114,7 @@ const CreateMarket = () => {
         totalLiquidity: initialLiquidity,
         txId,
         visible: false,
+        notes,
       };
 
       console.log("Sending market data:", marketData);
@@ -160,6 +162,7 @@ const CreateMarket = () => {
     setInitialLiquidity(1000);
     setYesPercentage(50);
     setFeePercentage(1);
+    setNotes("");
     setTxId(null);
   };
 
@@ -206,6 +209,14 @@ const CreateMarket = () => {
           >
             <NumberInputField />
           </NumberInput>
+        </FormControl>
+        <FormControl>
+          <FormLabel>Notes</FormLabel>
+          <Input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add any additional information or context"
+          />
         </FormControl>
         <Button
           onClick={createMarket}

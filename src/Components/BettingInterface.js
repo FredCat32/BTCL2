@@ -79,12 +79,14 @@ const BettingInterface = () => {
   const [userPosition, setUserPosition] = useState({ no: 0, yes: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [transactionAmount, setTransactionAmount] = useState("");
-
+  const [marketNotes, setMarketNotes] = useState("");
   const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
   const contractName = process.env.REACT_APP_CONTRACT_NAME;
   const apiEndpoint = "https://stacks-node-api.mainnet.stacks.co";
   const [slippage, setSlippage] = useState(0);
-
+  const [liquidityTokens, setLiquidityTokens] = useState(0);
+  const [totalLiquidityTokens, setTotalLiquidityTokens] = useState(0);
+  const [userLiquidity, setUserLiquidity] = useState(0);
   const calculateEstimatedValue = (tokenAmount, poolSize, totalLiquidity) => {
     return (tokenAmount * totalLiquidity) / poolSize;
   };
@@ -107,6 +109,17 @@ const BettingInterface = () => {
     );
 
     return stxAmount;
+  };
+  const fetchMarketDetailsFromBackend = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/markets/${marketId}`);
+      console.log("Notes Response:" + response.data.notes);
+      if (response.data && response.data.notes) {
+        setMarketNotes("Testing");
+      }
+    } catch (error) {
+      console.error("Error fetching market details from backend:", error);
+    }
   };
   const calculateEstimatedNoAmount = (stxAmount, yesPool, noPool) => {
     const feeDenominator = 10000;
@@ -174,13 +187,15 @@ const BettingInterface = () => {
   };
 
   const marketDetails = apiResponse ? parseClarityValue(apiResponse) : null;
-  console.log(marketDetails);
-  console.log(marketDetails);
+  // console.log(marketDetails);
+  // console.log(marketDetails);
 
   useEffect(() => {
     if (onChainId) {
       fetchMarketDetails();
       fetchUserPosition();
+      fetchUserLiquidity();
+      fetchMarketDetailsFromBackend();
     }
   }, [onChainId]);
   useEffect(() => {
@@ -213,8 +228,6 @@ const BettingInterface = () => {
 
     try {
       const response = await callReadOnlyFunction(options);
-      console.log("Fetch Market Details");
-      console.log(response);
 
       // Check if response is defined and has the expected structure
       if (response && response.value && response.value.data) {
@@ -229,25 +242,25 @@ const BettingInterface = () => {
           const outcomeValue = response.value.data.outcome?.value;
           if (outcomeValue !== undefined) {
             const parsedOutcome = cvToValue(outcomeValue);
-            console.log("Parsed Outcome:", parsedOutcome);
+            //  console.log("Parsed Outcome:", parsedOutcome);
             setOutcome(parsedOutcome);
           } else {
-            console.log("Outcome value is undefined");
+            //  console.log("Outcome value is undefined");
           }
 
           const resolvedValue = response.value.data.resolved;
           if (resolvedValue !== undefined) {
             const parsedResolve = cvToValue(resolvedValue);
-            console.log("Parsed Resolve:", parsedResolve);
+            // console.log("Parsed Resolve:", parsedResolve);
             setResolution(parsedResolve);
           } else {
-            console.log("Resolved value is undefined");
+            // console.log("Resolved value is undefined");
           }
           const newYesPool = (parsedResponse["yes-pool"] ?? 0) / 1000000; // Convert to STX
           const newNoPool = (parsedResponse["no-pool"] ?? 0) / 1000000; // Convert to STX
 
           if (newYesPool !== yesPool || newNoPool !== noPool) {
-            console.log("Pool values have changed. Updating backend...");
+            //  console.log("Pool values have changed. Updating backend...");
 
             try {
               const url = `${API_URL}/api/markets/${marketId}`;
@@ -260,13 +273,13 @@ const BettingInterface = () => {
                 throw new Error("Failed to update market in backend");
               }
 
-              console.log("Backend updated successfully");
+              // console.log("Backend updated successfully");
 
               // Update local state
               setYesPool(newYesPool);
               setNoPool(newNoPool);
             } catch (error) {
-              console.error("Error updating backend:", error);
+              // console.error("Error updating backend:", error);
               setError("Failed to update market data in backend");
             }
           }
@@ -278,7 +291,7 @@ const BettingInterface = () => {
       }
     } catch (err) {
       setError(err.message);
-      console.error("Error in fetchMarketDetails:", err);
+      // console.error("Error in fetchMarketDetails:", err);
     } finally {
       setIsLoading(false);
     }
@@ -286,7 +299,7 @@ const BettingInterface = () => {
 
   const claimLPWinnings = async () => {
     if (!userData || !userData.profile) {
-      console.error("User not connected");
+      // console.error("User not connected");
       setError("Please connect your wallet first");
       return;
     }
@@ -308,7 +321,7 @@ const BettingInterface = () => {
       network: new StacksMainnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
-        console.log("Transaction submitted:", data);
+        //  console.log("Transaction submitted:", data);
         showTransactionToast(
           "Claim LP Winnings",
           "Success",
@@ -320,7 +333,7 @@ const BettingInterface = () => {
         fetchUserPosition();
       },
       onCancel: () => {
-        console.log("Transaction canceled");
+        // console.log("Transaction canceled");
         showTransactionToast(
           "Claim LP Winnings",
           "Cancelled",
@@ -333,7 +346,7 @@ const BettingInterface = () => {
     try {
       await doContractCall(options);
     } catch (error) {
-      console.error("Error claiming LP winnings:", error);
+      // console.error("Error claiming LP winnings:", error);
       setIsLoading(false);
       setError(error.message);
       showTransactionToast("Claim LP Winnings", "Error", error.message);
@@ -355,7 +368,7 @@ const BettingInterface = () => {
   };
   const handleSwapStxToYes = async () => {
     if (!userData || !userData.profile) {
-      console.error("User not connected");
+      // console.error("User not connected");
       setError("Please connect your wallet first");
       return;
     }
@@ -367,7 +380,7 @@ const BettingInterface = () => {
 
     // Ensure microStxAmount is an integer
     if (!Number.isInteger(microStxAmount)) {
-      console.error("microStxAmount is not an integer:", microStxAmount);
+      // console.error("microStxAmount is not an integer:", microStxAmount);
       setError("Invalid STX amount. Please enter a valid number.");
       return;
     }
@@ -383,7 +396,7 @@ const BettingInterface = () => {
 
     // Ensure estimatedYesTokens is a number
     if (isNaN(estimatedYesTokens)) {
-      console.error("estimatedYesTokens is NaN");
+      //  console.error("estimatedYesTokens is NaN");
       setError("Failed to estimate YES tokens. Please try again.");
       return;
     }
@@ -392,16 +405,16 @@ const BettingInterface = () => {
 
     // Ensure minYesAmount is an integer
     if (!Number.isInteger(minYesAmount)) {
-      console.error("minYesAmount is not an integer:", minYesAmount);
+      //  console.error("minYesAmount is not an integer:", minYesAmount);
       setError("Invalid minimum YES amount. Please try again.");
       return;
     }
 
     // Log values for debugging
-    console.log("microStxAmount:", microStxAmount);
-    console.log("estimatedYesTokens:", estimatedYesTokens);
-    console.log("minYesAmount:", minYesAmount);
-    console.log("Market Details:", marketDetails);
+    //  console.log("microStxAmount:", microStxAmount);
+    //  console.log("estimatedYesTokens:", estimatedYesTokens);
+    //  console.log("minYesAmount:", minYesAmount);
+    //  console.log("Market Details:", marketDetails);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -423,10 +436,10 @@ const BettingInterface = () => {
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
-        console.log("Transaction submitted:", data);
+        //    console.log("Transaction submitted:", data);
       },
       onCancel: () => {
-        console.log("Transaction canceled");
+        //    console.log("Transaction canceled");
       },
     };
 
@@ -438,7 +451,7 @@ const BettingInterface = () => {
         "Successfully bought Yes tokens"
       );
     } catch (error) {
-      console.error("Error calling contract:", error);
+      //   console.error("Error calling contract:", error);
       showTransactionToast("Buy Yes", "Error", error.message);
       setError(error.message);
     }
@@ -446,7 +459,7 @@ const BettingInterface = () => {
 
   const handleAddLiquidity = async () => {
     if (!userData || !userData.profile) {
-      console.error("User not connected");
+      //   console.error("User not connected");
       setError("Please connect your wallet first");
       return;
     }
@@ -480,13 +493,13 @@ const BettingInterface = () => {
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
-        console.log("Transaction submitted:", data);
+        //  console.log("Transaction submitted:", data);
         // Optionally refresh market details and user position here
         fetchMarketDetails();
         fetchUserPosition();
       },
       onCancel: () => {
-        console.log("Transaction canceled");
+        // console.log("Transaction canceled");
       },
     };
 
@@ -548,12 +561,12 @@ const BettingInterface = () => {
       network: new StacksMainnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
-        console.log("Transaction submitted:", data);
+        //  console.log("Transaction submitted:", data);
         fetchMarketDetails();
         fetchUserPosition();
       },
       onCancel: () => {
-        console.log("Transaction canceled");
+        //  console.log("Transaction canceled");
       },
     };
 
@@ -615,10 +628,10 @@ const BettingInterface = () => {
     }
 
     // Log values for debugging
-    console.log("microTokenAmount:", microTokenAmount);
-    console.log("estimatedStxAmount:", estimatedStxAmount);
-    console.log("minStxAmount:", minStxAmount);
-    console.log("Market Details:", marketDetails);
+    //  console.log("microTokenAmount:", microTokenAmount);
+    // console.log("estimatedStxAmount:", estimatedStxAmount);
+    //  console.log("minStxAmount:", minStxAmount);
+    //  console.log("Market Details:", marketDetails);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -635,13 +648,13 @@ const BettingInterface = () => {
       postConditions: [],
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
-        console.log("Transaction submitted:", data);
+        //  console.log("Transaction submitted:", data);
       },
       onCancel: () => {
-        console.log("Transaction canceled");
+        //  console.log("Transaction canceled");
       },
     };
-    console.log(options);
+    //  console.log(options);
     try {
       await doContractCall(options);
       showTransactionToast(
@@ -700,10 +713,10 @@ const BettingInterface = () => {
     }
 
     // Log values for debugging
-    console.log("microTokenAmount:", microTokenAmount);
-    console.log("estimatedStxAmount:", estimatedStxAmount);
-    console.log("minStxAmount:", minStxAmount);
-    console.log("Market Details:", marketDetails);
+    // console.log("microTokenAmount:", microTokenAmount);
+    //  console.log("estimatedStxAmount:", estimatedStxAmount);
+    //  console.log("minStxAmount:", minStxAmount);
+    // console.log("Market Details:", marketDetails);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -720,18 +733,18 @@ const BettingInterface = () => {
       postConditions: [],
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
-        console.log("Transaction submitted:", data);
+        //   console.log("Transaction submitted:", data);
       },
       onCancel: () => {
-        console.log("Transaction canceled");
+        //     console.log("Transaction canceled");
       },
     };
-    console.log(options);
+    //  console.log(options);
     try {
       await doContractCall(options);
       showTransactionToast("Sell No", "Success", "Successfully sold No tokens");
     } catch (error) {
-      console.error("Error calling contract:", error);
+      //    console.error("Error calling contract:", error);
       showTransactionToast("Sell No", "Error", error.message);
       setError(error.message);
     }
@@ -739,7 +752,7 @@ const BettingInterface = () => {
 
   const handleSwapStxToNo = async () => {
     if (!userData || !userData.profile) {
-      console.error("User not connected");
+      //    console.error("User not connected");
       setError("Please connect your wallet first");
       return;
     }
@@ -751,7 +764,7 @@ const BettingInterface = () => {
 
     // Ensure microStxAmount is an integer
     if (!Number.isInteger(microStxAmount)) {
-      console.error("microStxAmount is not an integer:", microStxAmount);
+      //    console.error("microStxAmount is not an integer:", microStxAmount);
       setError("Invalid STX amount. Please enter a valid number.");
       return;
     }
@@ -767,7 +780,7 @@ const BettingInterface = () => {
 
     // Ensure estimatedNoTokens is a number
     if (isNaN(estimatedNoTokens)) {
-      console.error("estimatedNoTokens is NaN");
+      //    console.error("estimatedNoTokens is NaN");
       setError("Failed to estimate NO tokens. Please try again.");
       return;
     }
@@ -776,16 +789,16 @@ const BettingInterface = () => {
 
     // Ensure minNoAmount is an integer
     if (!Number.isInteger(minNoAmount)) {
-      console.error("minNoAmount is not an integer:", minNoAmount);
+      //   console.error("minNoAmount is not an integer:", minNoAmount);
       setError("Invalid minimum NO amount. Please try again.");
       return;
     }
 
     // Log values for debugging
-    console.log("microStxAmount:", microStxAmount);
-    console.log("estimatedNoTokens:", estimatedNoTokens);
-    console.log("minNoAmount:", minNoAmount);
-    console.log("Market Details:", marketDetails);
+    //  console.log("microStxAmount:", microStxAmount);
+    //   console.log("estimatedNoTokens:", estimatedNoTokens);
+    //   console.log("minNoAmount:", minNoAmount);
+    //   console.log("Market Details:", marketDetails);
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -807,10 +820,10 @@ const BettingInterface = () => {
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
-        console.log("Transaction submitted:", data);
+        //    console.log("Transaction submitted:", data);
       },
       onCancel: () => {
-        console.log("Transaction canceled");
+        //     console.log("Transaction canceled");
       },
     };
 
@@ -822,7 +835,7 @@ const BettingInterface = () => {
         "Successfully bought No tokens"
       );
     } catch (error) {
-      console.error("Error calling contract:", error);
+      //   console.error("Error calling contract:", error);
       setError(error.message);
       showTransactionToast("Buy No", "Error", error.message);
     }
@@ -842,14 +855,68 @@ const BettingInterface = () => {
         handleSwapNoToStx();
       }
     } else {
-      console.log("Unknown transaction type");
+      //    console.log("Unknown transaction type");
       setError("Unknown transaction type. Please try again.");
     }
   };
+  const fetchUserLiquidity = async () => {
+    if (!userData?.profile?.stxAddress?.mainnet) {
+      //  console.error("User data is not available");
+      setError("User data is not available. Please ensure you're logged in.");
+      return;
+    }
 
+    setIsLoading(true);
+    setError(null);
+
+    const functionName = "get-user-liquidity";
+    const marketId = uintCV(onChainId);
+    const userAddress = userData.profile.stxAddress.mainnet;
+    const user = standardPrincipalCV(userAddress);
+    const network = new StacksMainnet();
+
+    const options = {
+      contractAddress,
+      contractName,
+      functionName,
+      functionArgs: [marketId, user],
+      network,
+      senderAddress: userAddress,
+    };
+
+    try {
+      const response = await callReadOnlyFunction(options);
+      console.log("Full User Liquidity Response:", response);
+
+      if (response && response.value) {
+        const responseString = cvToString(response);
+        console.log("Response String:", responseString);
+
+        // Parse the response string to extract the number
+        const match = responseString.match(/\(ok u(\d+)\)/);
+        if (match) {
+          const liquidityValue = parseInt(match[1], 10);
+          const adjustedLiquidity = liquidityValue / 1000000; // Convert to STX
+          console.log("Parsed Liquidity:", liquidityValue);
+          console.log("Adjusted Liquidity (STX):", adjustedLiquidity);
+          setUserLiquidity(adjustedLiquidity);
+        } else {
+          console.error("Failed to parse liquidity value from response");
+          setError("Failed to parse liquidity value");
+        }
+      } else {
+        throw new Error("Unexpected response structure");
+      }
+    } catch (err) {
+      console.error("Error fetching user liquidity:", err);
+      setError(`Failed to fetch user liquidity: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const fetchUserPosition = async () => {
     if (!userData || !userData.profile) {
-      console.log("User data is not available");
+      //  console.log("User data is not available");
       return;
     }
     setIsLoading(true);
@@ -870,24 +937,21 @@ const BettingInterface = () => {
 
     try {
       const response = await callReadOnlyFunction(options);
-      console.log("Fetch User Details");
-      console.log(response);
-
       // Parse the response
       if (response && response.value && response.value.data) {
         const newUserPosition = {
           no: Number(response.value.data.no.value) / 1000000,
           yes: Number(response.value.data.yes.value) / 1000000,
         };
-        console.log("Parsed User Position:", newUserPosition); // Changed this line
+        //console.log("Parsed User Position:", newUserPosition); // Changed this line
         setUserPosition(newUserPosition); // Update the state
       } else {
-        console.log("Unexpected response structure:", response);
+        //console.log("Unexpected response structure:", response);
         setError("Unable to parse user position");
       }
     } catch (err) {
       setError(err.message);
-      console.log("Error:", err.message);
+      //console.log("Error:", err.message);
     } finally {
       setIsLoading(false);
     }
@@ -923,7 +987,7 @@ const BettingInterface = () => {
 
     try {
       const url = `${apiEndpoint}/v2/contracts/call-read/${contractAddress}/${contractName}/get-contract-owner`;
-      console.log("Fetching contract owner from URL:", url);
+      //console.log("Fetching contract owner from URL:", url);
 
       const response = await fetch(url, {
         method: "POST",
@@ -939,10 +1003,10 @@ const BettingInterface = () => {
       }
 
       const responseData = await response.json();
-      console.log(
-        "Contract owner raw response:",
-        JSON.stringify(responseData, null, 2)
-      );
+      //console.log(
+      // "Contract owner raw response:",
+      // JSON.stringify(responseData, null, 2)
+      //  );
 
       if (responseData.okay && responseData.result) {
         const clarityValue = hexToCV(responseData.result);
@@ -988,7 +1052,7 @@ const BettingInterface = () => {
       network: new StacksMainnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
-        console.log("Transaction submitted:", data);
+        // console.log("Transaction submitted:", data);
         showTransactionToast(
           "Claim Winnings",
           "Success",
@@ -998,7 +1062,7 @@ const BettingInterface = () => {
         fetchUserPosition();
       },
       onCancel: () => {
-        console.log("Transaction canceled");
+        // console.log("Transaction canceled");
         showTransactionToast(
           "Claim Winnings",
           "Cancelled",
@@ -1010,7 +1074,7 @@ const BettingInterface = () => {
     try {
       await doContractCall(options);
     } catch (error) {
-      console.error("Error calling contract:", error);
+      // console.error("Error calling contract:", error);
       setError(error.message);
       showTransactionToast("Claim Winnings", "Error", error.message);
     }
@@ -1045,6 +1109,7 @@ const BettingInterface = () => {
                   Add Liquidity
                 </Button>
               </HStack>
+
               {userPosition && userPosition.yes > 0 && userPosition.no > 0 && (
                 <>
                   <Heading size="sm">Remove Liquidity</Heading>
@@ -1061,30 +1126,18 @@ const BettingInterface = () => {
                     </SliderTrack>
                     <SliderThumb />
                   </Slider>
+                  <div>
+                    <h2>User Liquidity</h2>
+                    <p>Total Liquidity: {userLiquidity.toFixed(6)} STX</p>
+                  </div>
                   <Text>{removeLiquidityPercentage}%</Text>
                   <Text>
                     Amount to remove:{" "}
                     {(
-                      ((userPosition.yes + userPosition.no) *
-                        removeLiquidityPercentage) /
+                      (userLiquidity * removeLiquidityPercentage) /
                       100
                     ).toFixed(6)}{" "}
-                    Tokens (Est.{" "}
-                    {(
-                      ((calculateEstimatedValue(
-                        userPosition.yes,
-                        marketDetails["yes-pool"],
-                        marketDetails["total-liquidity"]
-                      ) +
-                        calculateEstimatedValue(
-                          userPosition.no,
-                          marketDetails["no-pool"],
-                          marketDetails["total-liquidity"]
-                        )) *
-                        removeLiquidityPercentage) /
-                      100
-                    ).toFixed(6)}{" "}
-                    STX)
+                    STX
                   </Text>
                   <Button onClick={handleRemoveLiquidity} colorScheme="orange">
                     Remove Liquidity
@@ -1256,6 +1309,13 @@ const BettingInterface = () => {
               {marketDetails && !isResolved(marketDetails) && (
                 <Text>Estimated Slippage: {slippage}%</Text>
               )}
+              <Box mt={4}>
+                <Divider mb={4} />
+                <Heading size="sm" mb={2}>
+                  Market Notes
+                </Heading>
+                <Text>{marketNotes || "No notes available"}</Text>
+              </Box>
             </VStack>
           </CardBody>
         </Card>
