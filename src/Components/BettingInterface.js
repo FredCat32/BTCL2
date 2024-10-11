@@ -205,17 +205,20 @@ const BettingInterface = () => {
   }, [onChainId]);
   useEffect(() => {
     if (marketDetails && transactionAmount) {
-      const poolSize = location.pathname.includes("/yes")
+      const inputPool = location.pathname.includes("/yes")
         ? marketDetails["yes-pool"]
         : marketDetails["no-pool"];
+      const outputPool = location.pathname.includes("/yes")
+        ? marketDetails["no-pool"]
+        : marketDetails["yes-pool"];
       const calculatedSlippage = calculateSlippage(
         transactionAmount * 1000000,
-        poolSize,
-        marketDetails["total-liquidity"]
+        inputPool,
+        outputPool
       );
       setSlippage(calculatedSlippage);
     }
-  }, [transactionAmount, marketDetails]);
+  }, [transactionAmount, marketDetails, location.pathname]);
   const fetchMarketDetails = async () => {
     setIsLoading(true);
     const functionName = "get-market-details";
@@ -357,20 +360,36 @@ const BettingInterface = () => {
       showTransactionToast("Claim LP Winnings", "Error", error.message);
     }
   };
-  const calculateSlippage = (amount, poolSize, totalLiquidity) => {
-    const constantProduct = poolSize * totalLiquidity;
-    const newPoolSize = poolSize + parseFloat(amount);
-    const newTotalLiquidity = totalLiquidity + parseFloat(amount);
-    const newOtherPoolSize = constantProduct / newPoolSize;
+  const calculateSlippage = (inputAmount, inputPool, outputPool) => {
+    // Ensure all inputs are numbers
+    const input = Number(inputAmount);
+    const inPool = Number(inputPool);
+    const outPool = Number(outputPool);
 
-    const priceBeforeSwap = totalLiquidity / poolSize;
-    const priceAfterSwap = newTotalLiquidity / newPoolSize;
+    // Calculate the constant product
+    const k = inPool * outPool;
 
-    const slippage =
-      ((priceAfterSwap - priceBeforeSwap) / priceBeforeSwap) * 100;
+    // Calculate new input pool size
+    const newInPool = inPool + input;
 
-    return Math.abs(slippage).toFixed(2);
+    // Calculate new output pool size
+    const newOutPool = k / newInPool;
+
+    // Calculate the amount of tokens received
+    const tokensReceived = outPool - newOutPool;
+
+    // Calculate the effective price before the swap
+    const priceBefore = outPool / inPool;
+
+    // Calculate the effective price after the swap
+    const priceAfter = tokensReceived / input;
+
+    // Calculate the price impact (slippage)
+    const slippage = ((priceBefore - priceAfter) / priceBefore) * 100;
+
+    return slippage.toFixed(2);
   };
+
   const handleSwapStxToYes = async () => {
     if (!userData || !userData.profile) {
       // console.error("User not connected");
@@ -587,6 +606,13 @@ const BettingInterface = () => {
       setError(error.message);
       showTransactionToast("Remove Liquidity", "Error", error.message);
     }
+  };
+  const formatNumber = (number, decimalPlaces = 3) => {
+    // First, round the number to the desired decimal places
+    const rounded = Number(number).toFixed(decimalPlaces);
+
+    // Then, remove trailing zeros after the decimal point
+    return parseFloat(rounded).toString();
   };
   const handleSwapYesToStx = async () => {
     if (!userData || !userData.profile) {
@@ -1115,7 +1141,7 @@ const BettingInterface = () => {
                 </Button>
               </HStack>
 
-              {userPosition && userPosition.yes > 0 && userPosition.no > 0 && (
+              {userLiquidity.toFixed(3) > 0 && (
                 <>
                   <Heading size="sm">Remove Liquidity</Heading>
                   <Text>Select percentage of liquidity to remove:</Text>
@@ -1133,7 +1159,7 @@ const BettingInterface = () => {
                   </Slider>
                   <div>
                     <h2>User Liquidity</h2>
-                    <p>Total Liquidity: {userLiquidity.toFixed(6)} STX</p>
+                    <p>Total Liquidity: {userLiquidity.toFixed(3)} STX</p>
                   </div>
                   <Text>{removeLiquidityPercentage}%</Text>
                   <Text>
@@ -1141,7 +1167,7 @@ const BettingInterface = () => {
                     {(
                       (userLiquidity * removeLiquidityPercentage) /
                       100
-                    ).toFixed(6)}{" "}
+                    ).toFixed(3)}{" "}
                     STX
                   </Text>
                   <Button onClick={handleRemoveLiquidity} colorScheme="orange">
@@ -1187,27 +1213,35 @@ const BettingInterface = () => {
                     <Stat>
                       <StatLabel>No Pool</StatLabel>
                       <StatNumber>
-                        {marketDetails["no-pool"] / 1000000} Tokens
+                        {formatNumber(marketDetails["no-pool"] / 1000000)}{" "}
+                        Tokens
                       </StatNumber>
                       <StatHelpText>
                         Est. Value:{" "}
-                        {(marketDetails["no-pool"] / 1000000).toFixed(6)} STX
+                        {formatNumber(
+                          (marketDetails["no-pool"] / 1000000).toFixed(3)
+                        )}{" "}
+                        STX
                       </StatHelpText>
                     </Stat>
                     <Stat>
                       <StatLabel>Yes Pool</StatLabel>
                       <StatNumber>
-                        {marketDetails["yes-pool"] / 1000000} Tokens
+                        {formatNumber(marketDetails["yes-pool"] / 1000000)}{" "}
+                        Tokens
                       </StatNumber>
                       <StatHelpText>
                         Est. Value:{" "}
-                        {(marketDetails["yes-pool"] / 1000000).toFixed(6)} STX
+                        {formatNumber(marketDetails["no-pool"] / 1000000)} STX
                       </StatHelpText>
                     </Stat>
                     <Stat>
                       <StatLabel>Total Liquidity</StatLabel>
                       <StatNumber>
-                        {marketDetails["total-liquidity"] / 1000000} STX
+                        {formatNumber(
+                          marketDetails["total-liquidity"] / 1000000
+                        )}{" "}
+                        STX
                       </StatNumber>
                     </Stat>
                     <Stat>
@@ -1236,7 +1270,9 @@ const BettingInterface = () => {
                   <SimpleGrid columns={2} spacing={4}>
                     <Stat>
                       <StatLabel>No Tokens</StatLabel>
-                      <StatNumber>{userPosition.no.toFixed(6)}</StatNumber>
+                      <StatNumber>
+                        {formatNumber(userPosition.no.toFixed(3))}
+                      </StatNumber>
                       <StatHelpText>
                         Est. Value:{" "}
                         {calculateEstimatedValue(
@@ -1249,14 +1285,16 @@ const BettingInterface = () => {
                     </Stat>
                     <Stat>
                       <StatLabel>Yes Tokens</StatLabel>
-                      <StatNumber>{userPosition.yes.toFixed(6)}</StatNumber>
+                      <StatNumber>
+                        {formatNumber(userPosition.yes.toFixed(3))}
+                      </StatNumber>
                       <StatHelpText>
                         Est. Value:{" "}
                         {calculateEstimatedValue(
                           userPosition.yes,
                           marketDetails["yes-pool"],
                           marketDetails["total-liquidity"]
-                        ).toFixed(6)}{" "}
+                        ).toFixed(3)}{" "}
                         STX
                       </StatHelpText>
                     </Stat>
@@ -1279,41 +1317,56 @@ const BettingInterface = () => {
                 )}
 
               <Heading size="sm">Trade Tokens</Heading>
-              <HStack>
-                <InputGroup>
+
+              <VStack spacing={4} width="full" align="stretch">
+                <InputGroup size="lg">
                   <Input
-                    type="text"
+                    placeholder="Enter Token amount"
                     value={transactionAmount}
                     onChange={handleAmountChange}
-                    placeholder="Enter Token amount"
                     isDisabled={marketDetails && isResolved(marketDetails)}
                   />
+                  <InputRightAddon children="Tokens" />
                 </InputGroup>
-                <Button
-                  onClick={() => handleTransaction("buy")}
-                  colorScheme="green"
-                  isDisabled={
-                    !transactionAmount ||
-                    (marketDetails && isResolved(marketDetails))
-                  }
-                >
-                  Buy {location.pathname.includes("/yes") ? "Yes" : "No"} Tokens
-                </Button>
-                <Button
-                  onClick={() => handleTransaction("sell")}
-                  colorScheme="red"
-                  isDisabled={
-                    !transactionAmount ||
-                    (marketDetails && isResolved(marketDetails))
-                  }
-                >
-                  Sell {location.pathname.includes("/yes") ? "Yes" : "No"}{" "}
-                  Tokens
-                </Button>
-              </HStack>
-              {marketDetails && !isResolved(marketDetails) && (
-                <Text>Estimated Slippage: {slippage}%</Text>
-              )}
+                <HStack spacing={4}>
+                  <Button
+                    onClick={() => handleTransaction("buy")}
+                    colorScheme="green"
+                    isDisabled={
+                      !transactionAmount ||
+                      (marketDetails && isResolved(marketDetails))
+                    }
+                    size="lg"
+                    flex={1}
+                    fontWeight="bold"
+                  >
+                    Buy {location.pathname.includes("/yes") ? "Yes" : "No"}{" "}
+                    Tokens
+                  </Button>
+                  <Button
+                    onClick={() => handleTransaction("sell")}
+                    colorScheme="red"
+                    isDisabled={
+                      !transactionAmount ||
+                      (marketDetails && isResolved(marketDetails))
+                    }
+                    size="lg"
+                    flex={1}
+                    fontWeight="bold"
+                  >
+                    Sell {location.pathname.includes("/yes") ? "Yes" : "No"}{" "}
+                    Tokens
+                  </Button>
+                </HStack>
+                {marketDetails && !isResolved(marketDetails) && (
+                  <Text
+                    fontSize="sm"
+                    color={slippage > 5 ? "orange.500" : "gray.500"}
+                  >
+                    Estimated Slippage: {slippage}%
+                  </Text>
+                )}
+              </VStack>
               <Box mt={4}>
                 <Divider mb={4} />
                 <Heading size="sm" mb={2}>
