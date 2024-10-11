@@ -564,17 +564,14 @@ const BettingInterface = () => {
 
     const userAddress = userData.profile.stxAddress.mainnet;
 
-    // Calculate the amount of liquidity to remove based on the user's total position and the selected percentage
-    const totalUserLiquidity = userPosition.yes + userPosition.no;
-    const liquidityToRemove =
-      (totalUserLiquidity * removeLiquidityPercentage) / 100;
-
-    // Convert liquidityToRemove to microSTX
-    const microStxAmount = Math.floor(liquidityToRemove * 1000000);
+    // Calculate the amount of LP tokens to remove based on the user's total liquidity and the selected percentage
+    const lpTokensToRemove = Math.floor(
+      ((userLiquidity * removeLiquidityPercentage) / 100) * 1000000
+    );
 
     const functionArgs = [
       uintCV(onChainId), // market-id
-      uintCV(microStxAmount), // stx-amount in microSTX
+      uintCV(lpTokensToRemove), // lp-tokens-to-remove in micro units
     ];
 
     const options = {
@@ -585,12 +582,13 @@ const BettingInterface = () => {
       network: new StacksMainnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
-        //  console.log("Transaction submitted:", data);
+        console.log("Transaction submitted:", data);
         fetchMarketDetails();
         fetchUserPosition();
+        fetchUserLiquidity(); // Make sure to fetch updated liquidity
       },
       onCancel: () => {
-        //  console.log("Transaction canceled");
+        console.log("Transaction canceled");
       },
     };
 
