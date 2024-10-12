@@ -13,6 +13,11 @@ const theme = extendTheme({
       darkblue: "#4C4C9D",
     },
   },
+  sizes: {
+    container: {
+      xl: "100%", // Set the xl container to full width
+    },
+  },
 });
 
 export default theme;

@@ -59,13 +59,13 @@ const CryptoMarquee = () => {
   return (
     <Box
       overflow="hidden"
-      bg="rgba(0,0,0,0.5)"
+      bg="rgba(0,0,0,0.7)"
       backdropFilter="blur(10px)"
       py={2}
     >
       <HStack
         spacing={8}
-        animation={`${scroll} 30s linear infinite`}
+        animation={`${scroll} 60s linear infinite`}
         whiteSpace="nowrap"
       >
         {prices.concat(prices).map((coin, index) => (

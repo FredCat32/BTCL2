@@ -1,6 +1,6 @@
 import React from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { Box, Flex, Link, Heading, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Link, Heading, Stack, Button } from "@chakra-ui/react";
 import WalletConnection from "./WalletConnection";
 import { useWallet } from "../WalletContext";
 
@@ -10,10 +10,11 @@ const Navbar = () => {
   const { userData } = useWallet();
   const userAddress = userData?.profile?.stxAddress?.mainnet;
   const isAdmin = userAddress === ADMIN_ADDRESS;
-  console.log(isAdmin);
-  console.log(userAddress);
 
-  const navItems = [{ name: "Home", path: "/" }, {}];
+  const navItems = [
+    { name: "Home", path: "/" },
+    { name: "Stats", path: "/stats" },
+  ];
 
   if (isAdmin) {
     navItems.push({ name: "Admin", path: "/admin/markets" });
@@ -21,7 +22,7 @@ const Navbar = () => {
   }
 
   return (
-    <Box backdropFilter="blur(10px)" backgroundColor="rgba(0, 0, 0, 0.3)">
+    <Box bg="rgba(0,0,0,0.7)" backdropFilter="blur(10px)">
       <Flex
         color="white"
         minH={"60px"}
@@ -34,23 +35,22 @@ const Navbar = () => {
         maxWidth="container.xl"
         margin="0 auto"
       >
-        <Flex flex={{ base: 1 }} justify={{ base: "center", md: "start" }}>
-          <Heading
-            as="h1"
-            size="lg"
-            letterSpacing={"wider"}
-            color="white"
-            textShadow="0 0 10px rgba(255,255,255,0.5)"
-          >
-            Bitcoin Prediction
-          </Heading>
-        </Flex>
+        <Heading
+          as="h1"
+          size="lg"
+          letterSpacing={"wider"}
+          color="white"
+          textShadow="0 0 10px rgba(255,255,255,0.5)"
+          mr={8} // Add margin to the right of the title
+        >
+          Bitcoin Prediction
+        </Heading>
         <Stack
-          flex={{ base: 1, md: 0 }}
-          justify={"flex-end"}
           direction={"row"}
           spacing={6}
-          display={{ base: "flex", md: "flex" }}
+          align="center"
+          flex={1}
+          justify="flex-end"
         >
           {navItems.map((item) => (
             <Link

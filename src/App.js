@@ -32,7 +32,6 @@ const ProtectedAdminRoute = ({ children }) => {
 
   return children;
 };
-
 const AppContent = () => {
   const { userData } = useWallet();
   const userAddress = userData?.profile?.stxAddress?.mainnet;
@@ -42,13 +41,14 @@ const AppContent = () => {
       <Box
         minHeight="100vh"
         width="100%"
+        backgroundImage="url('/background.jpg')"
         backgroundSize="cover"
         backgroundPosition="center"
         backgroundAttachment="fixed"
       >
-        <Navbar userAddress={userAddress} />
         <CryptoMarquee />
-        <Container maxWidth="container.xl" py={8}>
+        <Navbar userAddress={userAddress} />
+        <Box width="100%" px={4} py={8}>
           <Routes>
             <Route path="/" element={<MarketList />} />
             <Route
@@ -65,7 +65,7 @@ const AppContent = () => {
               }
             />
           </Routes>
-        </Container>
+        </Box>
       </Box>
     </Router>
   );

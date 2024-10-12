@@ -15,9 +15,8 @@ import {
 import axios from "axios";
 import { useConnect } from "@stacks/connect-react";
 import { StacksMainnet } from "@stacks/network";
-import { uintCV } from "@stacks/transactions";
+import { uintCV, stringAsciiCV } from "@stacks/transactions";
 import { PostConditionMode } from "@stacks/transactions";
-import { stringAsciiCV } from "@stacks/transactions";
 
 const CreateMarket = () => {
   const [question, setQuestion] = useState("");
@@ -26,16 +25,13 @@ const CreateMarket = () => {
   const [feePercentage, setFeePercentage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notes, setNotes] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [txId, setTxId] = useState(null);
   const toast = useToast();
   const { doContractCall } = useConnect();
   const API_URL = process.env.REACT_APP_API_URL;
 
   const createMarket = async () => {
-    console.log(API_URL);
-    console.log(question);
-    console.log(feePercentage);
-    console.log();
     if (!question.trim()) {
       toast({
         title: "Error",
@@ -49,7 +45,7 @@ const CreateMarket = () => {
 
     setIsSubmitting(true);
     try {
-      const network = new StacksMainnet(); // Use StacksMainnet for production
+      const network = new StacksMainnet();
       const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
       const contractName = process.env.REACT_APP_CONTRACT_NAME;
       const functionName = "create-market";
@@ -71,14 +67,6 @@ const CreateMarket = () => {
           console.log("Contract call finished", data);
           setTxId(data.txId);
           await storeMarketInDatabase(data.txId);
-          toast({
-            title: "Success",
-            description:
-              "Market created successfully. It will be visible after admin approval.",
-            status: "success",
-            duration: 5000,
-            isClosable: true,
-          });
         },
         onCancel: () => {
           console.log("Contract call was cancelled");
@@ -93,7 +81,7 @@ const CreateMarket = () => {
         },
       });
     } catch (error) {
-      console.error("Error creating market :", error);
+      console.error("Error creating market:", error);
       toast({
         title: "Error",
         description: "Failed to create market",
@@ -105,6 +93,7 @@ const CreateMarket = () => {
       setIsSubmitting(false);
     }
   };
+
   const storeMarketInDatabase = async (txId) => {
     try {
       const marketData = {
@@ -115,9 +104,8 @@ const CreateMarket = () => {
         txId,
         visible: false,
         notes,
+        imageUrl,
       };
-
-      console.log("Sending market data:", marketData);
 
       const response = await axios.post(`${API_URL}/api/markets`, marketData);
       console.log("API Response:", response.data);
@@ -163,6 +151,7 @@ const CreateMarket = () => {
     setYesPercentage(50);
     setFeePercentage(1);
     setNotes("");
+    setImageUrl("");
     setTxId(null);
   };
 
@@ -216,6 +205,14 @@ const CreateMarket = () => {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add any additional information or context"
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Background Image URL</FormLabel>
+          <Input
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="Enter image URL"
           />
         </FormControl>
         <Button
