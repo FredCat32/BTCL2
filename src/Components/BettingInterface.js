@@ -409,7 +409,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const slippageTolerance = 0.99; // Accept up to 1% slippage
+    const slippageTolerance = 0.95; // Accept up to 1% slippage
 
     // Use the updated estimation function with hardcoded fee
     const estimatedYesTokens = calculateEstimatedYesAmount(
@@ -631,7 +631,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const slippageTolerance = 0.99; // Accept up to 1% slippage
+    const slippageTolerance = 0.95; // Accept up to 1% slippage
 
     // Use the updated estimation function with hardcoded fee
     const estimatedStxAmount = calculateEstimatedStxFromYes(
@@ -716,7 +716,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const slippageTolerance = 0.99; // Accept up to 1% slippage
+    const slippageTolerance = 0.95; // Accept up to 1% slippage
 
     // Use the updated estimation function with hardcoded fee
     const estimatedStxAmount = calculateEstimatedStxFromNo(
@@ -798,7 +798,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const slippageTolerance = 0.99; // Accept up to 1% slippage
+    const slippageTolerance = 0.95; // Accept up to 1% slippage
 
     // Use the updated estimation function with hardcoded fee
     const estimatedNoTokens = calculateEstimatedNoAmount(
