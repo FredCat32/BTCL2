@@ -93,8 +93,8 @@ const MarketList = () => {
                       borderRadius="full"
                       overflow="hidden"
                     >
-                      <Box width={`${percentages.yes}%`} bg="green.500" />
-                      <Box width={`${percentages.no}%`} bg="red.500" />
+                      <Box width={`${percentages.yes}%`} bg="teal.600" />
+                      <Box width={`${percentages.no}%`} bg="red.400" />
                     </Flex>
                     <Text color="white" fontSize="sm" fontWeight="bold">
                       Yes: {percentages.yes}% | No: {percentages.no}%
@@ -110,7 +110,9 @@ const MarketList = () => {
                           yesPool: market.yesPool,
                           noPool: market.noPool,
                         }}
-                        colorScheme="green"
+                        bg="teal.600"
+                        _hover={{ bg: "teal.500" }}
+                        color="white"
                         size="sm"
                         width="48%"
                       >
@@ -126,7 +128,9 @@ const MarketList = () => {
                           yesPool: market.yesPool,
                           noPool: market.noPool,
                         }}
-                        colorScheme="red"
+                        bg="red.400"
+                        _hover={{ bg: "red.600" }}
+                        color="white"
                         size="sm"
                         width="48%"
                       >

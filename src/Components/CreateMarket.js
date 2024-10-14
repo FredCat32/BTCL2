@@ -156,7 +156,14 @@ const CreateMarket = () => {
   };
 
   return (
-    <Box width="100%" maxWidth="500px" margin="auto">
+    <Box
+      maxWidth="800px"
+      margin="auto"
+      bg="white"
+      p={6}
+      borderRadius="lg"
+      boxShadow="lg"
+    >
       <VStack spacing={4}>
         <FormControl>
           <FormLabel>Market Question</FormLabel>

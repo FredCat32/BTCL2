@@ -224,7 +224,14 @@ const AdminMarketList = () => {
     }
   };
   return (
-    <Box maxWidth="800px" margin="auto">
+    <Box
+      maxWidth="800px"
+      margin="auto"
+      bg="white"
+      p={6}
+      borderRadius="lg"
+      boxShadow="lg"
+    >
       <Heading mb={4}>Admin Market List</Heading>
       <VStack spacing={4} align="stretch">
         {markets.map((market) => (
@@ -235,7 +242,7 @@ const AdminMarketList = () => {
             <HStack mt={2}>
               <Input
                 placeholder="Enter on-chain ID"
-                value={onChainIds[market._id]}
+                value={onChainIds[market._id] || ""}
                 onChange={(e) =>
                   handleOnChainIdChange(market._id, e.target.value)
                 }
@@ -257,7 +264,7 @@ const AdminMarketList = () => {
             <HStack mt={2}>
               <Select
                 placeholder="Select outcome"
-                value={outcomes[market._id]}
+                value={outcomes[market._id] || ""}
                 onChange={(e) =>
                   handleOutcomeChange(market._id, e.target.value)
                 }

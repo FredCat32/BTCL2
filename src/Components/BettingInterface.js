@@ -1111,7 +1111,10 @@ const BettingInterface = () => {
   return (
     <Box maxWidth="600px" margin="auto" p={6}>
       <VStack spacing={6} align="stretch">
-        <Card>
+        <Card
+          bg="rgba(255, 255, 255, 0.8)" // Soft gray with 50% transparency
+          backdropFilter="blur(10px)" // Add blur effect to improve readability
+        >
           <CardHeader>
             <Heading size="md">
               {market?.question || "Betting Market Interface"}
