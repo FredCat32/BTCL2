@@ -126,51 +126,51 @@ const MarketList = () => {
                     <Text color="white" fontSize="sm" fontWeight="bold">
                       Yes: {percentages.yes}% | No: {percentages.no}%
                     </Text>
-                    {!market.resolved ? (
-                      <Flex justifyContent="space-between" mt={2}>
-                        <Button
-                          as={Link}
-                          to={`/bet/${market._id}/yes`}
-                          state={{
-                            market,
-                            marketId: market._id,
-                            onChainId: market.onChainId,
-                            yesPool: market.yesPool,
-                            noPool: market.noPool,
-                          }}
-                          bg="teal.600"
-                          _hover={{ bg: "teal.500" }}
-                          color="white"
-                          size="sm"
-                          width="48%"
-                        >
-                          Yes
-                        </Button>
-                        <Button
-                          as={Link}
-                          to={`/bet/${market._id}/no`}
-                          state={{
-                            market,
-                            marketId: market._id,
-                            onChainId: market.onChainId,
-                            yesPool: market.yesPool,
-                            noPool: market.noPool,
-                          }}
-                          bg="red.400"
-                          _hover={{ bg: "red.600" }}
-                          color="white"
-                          size="sm"
-                          width="48%"
-                        >
-                          No
-                        </Button>
-                      </Flex>
-                    ) : (
+                    <Flex justifyContent="space-between" mt={2}>
+                      <Button
+                        as={Link}
+                        to={`/bet/${market._id}/yes`}
+                        state={{
+                          market,
+                          marketId: market._id,
+                          onChainId: market.onChainId,
+                          yesPool: market.yesPool,
+                          noPool: market.noPool,
+                        }}
+                        bg="teal.600"
+                        _hover={{ bg: "teal.500" }}
+                        color="white"
+                        size="sm"
+                        width="48%"
+                      >
+                        {market.resolved ? "View Yes" : "Yes"}
+                      </Button>
+                      <Button
+                        as={Link}
+                        to={`/bet/${market._id}/no`}
+                        state={{
+                          market,
+                          marketId: market._id,
+                          onChainId: market.onChainId,
+                          yesPool: market.yesPool,
+                          noPool: market.noPool,
+                        }}
+                        bg="red.400"
+                        _hover={{ bg: "red.600" }}
+                        color="white"
+                        size="sm"
+                        width="48%"
+                      >
+                        {market.resolved ? "View No" : "No"}
+                      </Button>
+                    </Flex>
+                    {market.resolved && (
                       <Text
                         color="white"
                         fontSize="md"
                         fontWeight="bold"
                         textAlign="center"
+                        mt={2}
                       >
                         Resolved: {market.outcome ? "Yes" : "No"}
                       </Text>
