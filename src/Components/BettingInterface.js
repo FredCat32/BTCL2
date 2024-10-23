@@ -40,7 +40,7 @@ import {
 } from "@stacks/transactions";
 import axios from "axios";
 
-import { StacksMainnet } from "@stacks/network";
+import { StacksTestnet } from "@stacks/network";
 import { useConnect } from "@stacks/connect-react";
 import { useWallet } from "../WalletContext";
 
@@ -82,7 +82,7 @@ const BettingInterface = () => {
   const [marketNotes, setMarketNotes] = useState("");
   const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
   const contractName = process.env.REACT_APP_CONTRACT_NAME;
-  const apiEndpoint = "https://stacks-node-api.mainnet.stacks.co";
+  const apiEndpoint = "https://stacks-node-api.testnet.stacks.co";
   const [slippage, setSlippage] = useState(0);
   const [liquidityTokens, setLiquidityTokens] = useState(0);
   const [totalLiquidityTokens, setTotalLiquidityTokens] = useState(0);
@@ -192,8 +192,8 @@ const BettingInterface = () => {
   };
 
   const marketDetails = apiResponse ? parseClarityValue(apiResponse) : null;
-  // console.log(marketDetails);
-  // console.log(marketDetails);
+  console.log(marketDetails);
+  console.log(marketDetails);
 
   useEffect(() => {
     if (onChainId) {
@@ -206,11 +206,11 @@ const BettingInterface = () => {
   useEffect(() => {
     if (marketDetails && transactionAmount) {
       const inputPool = location.pathname.includes("/yes")
-        ? marketDetails["yes-pool"]
-        : marketDetails["no-pool"];
+        ? marketDetails["lp-yes-pool"]
+        : marketDetails["lp-no-pool"];
       const outputPool = location.pathname.includes("/yes")
-        ? marketDetails["no-pool"]
-        : marketDetails["yes-pool"];
+        ? marketDetails["lp-no-pool"]
+        : marketDetails["lp-yes-pool"];
       const calculatedSlippage = calculateSlippage(
         transactionAmount * 1000000,
         inputPool,
@@ -223,7 +223,7 @@ const BettingInterface = () => {
     setIsLoading(true);
     const functionName = "get-market-details";
     const tokenId = uintCV(onChainId);
-    const network = new StacksMainnet();
+    const network = new StacksTestnet();
 
     const options = {
       contractAddress,
@@ -264,8 +264,8 @@ const BettingInterface = () => {
           } else {
             // console.log("Resolved value is undefined");
           }
-          const newYesPool = (parsedResponse["yes-pool"] ?? 0) / 1000000; // Convert to STX
-          const newNoPool = (parsedResponse["no-pool"] ?? 0) / 1000000; // Convert to STX
+          const newYesPool = (parsedResponse["bet-yes-pool"] ?? 0) / 1000000; // Convert to STX
+          const newNoPool = (parsedResponse["bet-no-pool"] ?? 0) / 1000000; // Convert to STX
 
           if (newYesPool !== yesPool || newNoPool !== noPool) {
             //  console.log("Pool values have changed. Updating backend...");
@@ -326,7 +326,7 @@ const BettingInterface = () => {
       contractName,
       functionName,
       functionArgs: [marketId],
-      network: new StacksMainnet(),
+      network: new StacksTestnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
         //  console.log("Transaction submitted:", data);
@@ -397,7 +397,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.mainnet;
+    const userAddress = userData.profile.stxAddress.testnet;
 
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
@@ -414,8 +414,8 @@ const BettingInterface = () => {
     // Use the updated estimation function with hardcoded fee
     const estimatedYesTokens = calculateEstimatedYesAmount(
       microStxAmount,
-      marketDetails["yes-pool"],
-      marketDetails["no-pool"]
+      marketDetails["lp-yes-pool"],
+      marketDetails["lp-no-pool"]
     );
 
     // Ensure estimatedYesTokens is a number
@@ -456,7 +456,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "swap-stx-to-yes",
       functionArgs,
-      network: new StacksMainnet(),
+      network: new StacksTestnet(),
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
@@ -489,7 +489,7 @@ const BettingInterface = () => {
     }
     showTransactionToast("Add Liquidity", "Pending", "Transaction submitted");
 
-    const userAddress = userData.profile.stxAddress.mainnet;
+    const userAddress = userData.profile.stxAddress.testnet;
 
     // Convert liquidityAmount to microSTX
     const microStxAmount = parseInt(parseFloat(liquidityAmount) * 1000000);
@@ -513,7 +513,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "add-liquidity",
       functionArgs,
-      network: new StacksMainnet(),
+      network: new StacksTestnet(),
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
@@ -562,7 +562,7 @@ const BettingInterface = () => {
       "Transaction submitted"
     );
 
-    const userAddress = userData.profile.stxAddress.mainnet;
+    const userAddress = userData.profile.stxAddress.testnet;
 
     // Calculate the amount of LP tokens to remove based on the user's total liquidity and the selected percentage
     const lpTokensToRemove = Math.floor(
@@ -579,7 +579,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "remove-liquidity",
       functionArgs,
-      network: new StacksMainnet(),
+      network: new StacksTestnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
         console.log("Transaction submitted:", data);
@@ -619,7 +619,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.mainnet;
+    const userAddress = userData.profile.stxAddress.testnet;
 
     // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
@@ -636,8 +636,8 @@ const BettingInterface = () => {
     // Use the updated estimation function with hardcoded fee
     const estimatedStxAmount = calculateEstimatedStxFromYes(
       microTokenAmount,
-      marketDetails["yes-pool"],
-      marketDetails["no-pool"]
+      marketDetails["lp-yes-pool"],
+      marketDetails["lp-no-pool"]
     );
 
     // Ensure estimatedStxAmount is a number
@@ -673,7 +673,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "swap-yes-to-stx",
       functionArgs,
-      network: new StacksMainnet(),
+      network: new StacksTestnet(),
       postConditions: [],
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
@@ -704,7 +704,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.mainnet;
+    const userAddress = userData.profile.stxAddress.testnet;
 
     // Convert transactionAmount to microTokens
     const microTokenAmount = parseInt(parseFloat(transactionAmount) * 1000000);
@@ -721,8 +721,8 @@ const BettingInterface = () => {
     // Use the updated estimation function with hardcoded fee
     const estimatedStxAmount = calculateEstimatedStxFromNo(
       microTokenAmount,
-      marketDetails["yes-pool"],
-      marketDetails["no-pool"]
+      marketDetails["lp-yes-pool"],
+      marketDetails["lp-no-pool"]
     );
 
     // Ensure estimatedStxAmount is a number
@@ -758,7 +758,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "swap-no-to-stx",
       functionArgs,
-      network: new StacksMainnet(),
+      network: new StacksTestnet(),
       postConditions: [],
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
@@ -786,7 +786,7 @@ const BettingInterface = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.mainnet;
+    const userAddress = userData.profile.stxAddress.testnet;
 
     // Convert transactionAmount to microSTX
     const microStxAmount = parseInt(parseFloat(transactionAmount) * 1000000);
@@ -803,8 +803,8 @@ const BettingInterface = () => {
     // Use the updated estimation function with hardcoded fee
     const estimatedNoTokens = calculateEstimatedNoAmount(
       microStxAmount,
-      marketDetails["yes-pool"],
-      marketDetails["no-pool"]
+      marketDetails["lp-yes-pool"],
+      marketDetails["lp-no-pool"]
     );
 
     // Ensure estimatedNoTokens is a number
@@ -845,7 +845,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "swap-stx-to-no",
       functionArgs,
-      network: new StacksMainnet(),
+      network: new StacksTestnet(),
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
       onFinish: (data) => {
@@ -889,7 +889,7 @@ const BettingInterface = () => {
     }
   };
   const fetchUserLiquidity = async () => {
-    if (!userData?.profile?.stxAddress?.mainnet) {
+    if (!userData?.profile?.stxAddress?.testnet) {
       //  console.error("User data is not available");
       setError("User data is not available. Please ensure you're logged in.");
       return;
@@ -900,9 +900,9 @@ const BettingInterface = () => {
 
     const functionName = "get-user-liquidity";
     const marketId = uintCV(onChainId);
-    const userAddress = userData.profile.stxAddress.mainnet;
+    const userAddress = userData.profile.stxAddress.testnet;
     const user = standardPrincipalCV(userAddress);
-    const network = new StacksMainnet();
+    const network = new StacksTestnet();
 
     const options = {
       contractAddress,
@@ -944,16 +944,17 @@ const BettingInterface = () => {
     }
   };
   const fetchUserPosition = async () => {
+    console.log("fetchinggggggggggg");
     if (!userData || !userData.profile) {
-      //  console.log("User data is not available");
+      console.log("User data is not available");
       return;
     }
     setIsLoading(true);
     const functionName = "get-user-position";
     const marketId = uintCV(onChainId);
-    const userAddress = userData.profile.stxAddress.mainnet;
+    const userAddress = userData.profile.stxAddress.testnet;
     const user = standardPrincipalCV(userAddress);
-    const network = new StacksMainnet();
+    const network = new StacksTestnet();
 
     const options = {
       contractAddress,
@@ -963,14 +964,16 @@ const BettingInterface = () => {
       network,
       senderAddress: userAddress,
     };
-
     try {
       const response = await callReadOnlyFunction(options);
+      console.log("response");
+      console.log(response);
       // Parse the response
       if (response && response.value && response.value.data) {
+        console.log("HEREEEEEEEEEEEEEEEEEE");
         const newUserPosition = {
-          no: Number(response.value.data.no.value) / 1000000,
-          yes: Number(response.value.data.yes.value) / 1000000,
+          no: Number(response.value.data["no-stx"].value) / 1000000,
+          yes: Number(response.value.data["yes-stx"].value) / 1000000,
         };
         //console.log("Parsed User Position:", newUserPosition); // Changed this line
         setUserPosition(newUserPosition); // Update the state
@@ -980,7 +983,7 @@ const BettingInterface = () => {
       }
     } catch (err) {
       setError(err.message);
-      //console.log("Error:", err.message);
+      console.log("Errorrr:", err.message);
     } finally {
       setIsLoading(false);
     }
@@ -1067,7 +1070,7 @@ const BettingInterface = () => {
 
     showTransactionToast("Claim Winnings", "Pending", "Transaction submitted");
 
-    const userAddress = userData.profile.stxAddress.mainnet;
+    const userAddress = userData.profile.stxAddress.testnet;
 
     const functionArgs = [
       uintCV(onChainId), // market-id
@@ -1078,7 +1081,7 @@ const BettingInterface = () => {
       contractName,
       functionName: "claim-winnings",
       functionArgs,
-      network: new StacksMainnet(),
+      network: new StacksTestnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: (data) => {
         // console.log("Transaction submitted:", data);
@@ -1214,13 +1217,13 @@ const BettingInterface = () => {
                     <Stat>
                       <StatLabel>No Pool</StatLabel>
                       <StatNumber>
-                        {formatNumber(marketDetails["no-pool"] / 1000000)}{" "}
+                        {formatNumber(marketDetails["bet-no-pool"] / 1000000)}{" "}
                         Tokens
                       </StatNumber>
                       <StatHelpText>
                         Est. Value:{" "}
                         {formatNumber(
-                          (marketDetails["no-pool"] / 1000000).toFixed(3)
+                          (marketDetails["bet-no-pool"] / 1000000).toFixed(3)
                         )}{" "}
                         STX
                       </StatHelpText>
@@ -1228,12 +1231,13 @@ const BettingInterface = () => {
                     <Stat>
                       <StatLabel>Yes Pool</StatLabel>
                       <StatNumber>
-                        {formatNumber(marketDetails["yes-pool"] / 1000000)}{" "}
+                        {formatNumber(marketDetails["bet-yes-pool"] / 1000000)}{" "}
                         Tokens
                       </StatNumber>
                       <StatHelpText>
                         Est. Value:{" "}
-                        {formatNumber(marketDetails["no-pool"] / 1000000)} STX
+                        {formatNumber(marketDetails["bet-yes-pool"] / 1000000)}{" "}
+                        STX
                       </StatHelpText>
                     </Stat>
                     <Stat>
@@ -1278,7 +1282,7 @@ const BettingInterface = () => {
                         Est. Value:{" "}
                         {calculateEstimatedValue(
                           userPosition.no,
-                          marketDetails["no-pool"],
+                          marketDetails["bet-no-pool"],
                           marketDetails["total-liquidity"]
                         ).toFixed(6)}{" "}
                         STX
@@ -1293,7 +1297,7 @@ const BettingInterface = () => {
                         Est. Value:{" "}
                         {calculateEstimatedValue(
                           userPosition.yes,
-                          marketDetails["yes-pool"],
+                          marketDetails["bet-yes-pool"],
                           marketDetails["total-liquidity"]
                         ).toFixed(3)}{" "}
                         STX

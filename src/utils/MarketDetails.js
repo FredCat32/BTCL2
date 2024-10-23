@@ -1,10 +1,10 @@
-import { StacksMainnet } from "@stacks/network";
+import { StacksTestnet } from "@stacks/network";
 
 export const fetchMarketDetails = async () => {
   setIsLoading(true);
   const functionName = "get-market-details";
   const tokenId = uintCV(onChainId);
-  const network = new StacksMainnet();
+  const network = new StacksTestnet();
 
   const options = {
     contractAddress,

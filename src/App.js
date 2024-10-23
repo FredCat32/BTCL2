@@ -34,7 +34,7 @@ const ProtectedAdminRoute = ({ children }) => {
 };
 const AppContent = () => {
   const { userData } = useWallet();
-  const userAddress = userData?.profile?.stxAddress?.mainnet;
+  const userAddress = userData?.profile?.stxAddress?.testnet;
 
   return (
     <Router>
@@ -75,7 +75,7 @@ function App() {
   const appConfig = {
     appName: "Bitcoin Prediction",
     appIconUrl: "/your-app-icon.png",
-    network: "mainnet",
+    network: "testnet",
   };
 
   return (

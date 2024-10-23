@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useConnect } from "@stacks/connect-react";
-import { StacksMainnet } from "@stacks/network";
+import { StacksTestnet } from "@stacks/network";
 import { uintCV, stringAsciiCV } from "@stacks/transactions";
 import { PostConditionMode } from "@stacks/transactions";
 
@@ -42,17 +42,38 @@ const CreateMarket = () => {
       });
       return;
     }
+    if (yesPercentage < 1 || yesPercentage > 99) {
+      toast({
+        title: "Error",
+        description: "Yes percentage must be between 1 and 99",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
 
+    if (feePercentage < 0 || feePercentage > 10) {
+      // 1000 basis points max
+      toast({
+        title: "Error",
+        description: "Fee percentage must be between 0 and 10",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
-      const network = new StacksMainnet();
+      const network = new StacksTestnet();
       const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
       const contractName = process.env.REACT_APP_CONTRACT_NAME;
       const functionName = "create-market";
       const functionArgs = [
-        uintCV(initialLiquidity * 1000000),
-        uintCV(yesPercentage * 100),
-        uintCV(feePercentage * 100),
+        uintCV(initialLiquidity * 1000000), // Convert STX to µSTX
+        uintCV(yesPercentage), // Direct percentage (1-99)
+        uintCV(feePercentage * 100), // Convert percentage to basis points (0-1000)
         stringAsciiCV(question),
       ];
 

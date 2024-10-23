@@ -14,7 +14,7 @@ import {
 import { uintCV, boolCV, PostConditionMode } from "@stacks/transactions";
 import { useConnect } from "@stacks/connect-react";
 import { useWallet } from "../WalletContext";
-import { StacksMainnet } from "@stacks/network";
+import { StacksTestnet } from "@stacks/network";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
@@ -118,7 +118,7 @@ const AdminMarketList = () => {
     setOutcomes((prev) => ({ ...prev, [marketId]: value }));
   };
 
-  const resolveMarket = async (marketId) => {
+  const resolveMarket = async (marketId, outcome) => {
     console.log("Resolving market:", marketId);
 
     if (!userData || !userData.profile) {
@@ -133,12 +133,12 @@ const AdminMarketList = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.StacksMainnet;
+    const userAddress = userData.profile.stxAddress.StacksTestnet;
     console.log("User address:", userAddress);
 
     const functionArgs = [
       uintCV(onChainIds[marketId]), // market-id
-      boolCV(false), // Hardcoded to true for testing
+      boolCV(outcome === "Yes" ? true : false),
     ];
     console.log("Function args:", functionArgs);
 
@@ -147,7 +147,7 @@ const AdminMarketList = () => {
       contractName,
       functionName: "resolve-market",
       functionArgs,
-      network: new StacksMainnet(),
+      network: new StacksTestnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: async (data) => {
         console.log("Transaction submitted:", data);
@@ -165,7 +165,7 @@ const AdminMarketList = () => {
           const response = await axios.post(
             `${API_URL}/api/markets/${marketId}/resolve`,
             {
-              outcome: true, // Hardcoded to true
+              outcome: outcome === "Yes", // Convert "Yes"/"No" to true/false
               txId: data.txId,
             }
           );
@@ -273,7 +273,7 @@ const AdminMarketList = () => {
                 <option value="No">No</option>
               </Select>
               <Button
-                onClick={() => resolveMarket(market._id)}
+                onClick={() => resolveMarket(market._id, outcomes[market._id])}
                 colorScheme="purple"
                 isDisabled={!outcomes[market._id] || !onChainIds[market._id]}
               >

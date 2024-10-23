@@ -40,7 +40,7 @@ const LastBlockTime = () => {
 
         // Fetch the latest Stacks block data
         const stxResponse = await fetch(
-          "https://stacks-node-api.mainnet.stacks.co/extended/v1/block"
+          "https://stacks-node-api.testnet.stacks.co/extended/v1/block"
         );
         const stxData = await stxResponse.json();
         console.log(stxData);
