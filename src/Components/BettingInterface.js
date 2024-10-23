@@ -264,8 +264,8 @@ const BettingInterface = () => {
           } else {
             // console.log("Resolved value is undefined");
           }
-          const newYesPool = (parsedResponse["bet-yes-pool"] ?? 0) / 1000000; // Convert to STX
-          const newNoPool = (parsedResponse["bet-no-pool"] ?? 0) / 1000000; // Convert to STX
+          const newYesPool = (parsedResponse["lp-yes-pool"] ?? 0) / 1000000; // Convert to STX
+          const newNoPool = (parsedResponse["lp-no-pool"] ?? 0) / 1000000; // Convert to STX
 
           if (newYesPool !== yesPool || newNoPool !== noPool) {
             //  console.log("Pool values have changed. Updating backend...");
