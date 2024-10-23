@@ -1,7 +1,7 @@
 import { openContractCall } from "@stacks/connect";
-import { StacksTestnet } from "@stacks/network";
+import { StacksMainnet } from "@stacks/network";
 
-const network = new StacksTestnet(); // Use Stackstestnet for production
+const network = new StacksMainnet(); // Use StacksMainnet for production
 
 export const mintTokens = async (amount, recipient) => {
   const functionArgs = [
