@@ -14,7 +14,7 @@ import {
 import { uintCV, boolCV, PostConditionMode } from "@stacks/transactions";
 import { useConnect } from "@stacks/connect-react";
 import { useWallet } from "../WalletContext";
-import { StacksTestnet } from "@stacks/network";
+import { StacksMainnet } from "@stacks/network";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
@@ -133,7 +133,7 @@ const AdminMarketList = () => {
       return;
     }
 
-    const userAddress = userData.profile.stxAddress.StacksTestnet;
+    const userAddress = userData.profile.stxAddress.StacksMainnet;
     console.log("User address:", userAddress);
 
     const functionArgs = [
@@ -147,7 +147,7 @@ const AdminMarketList = () => {
       contractName,
       functionName: "resolve-market",
       functionArgs,
-      network: new StacksTestnet(),
+      network: new StacksMainnet(),
       postConditionMode: PostConditionMode.Allow,
       onFinish: async (data) => {
         console.log("Transaction submitted:", data);

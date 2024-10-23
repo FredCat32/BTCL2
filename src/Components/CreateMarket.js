@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useConnect } from "@stacks/connect-react";
-import { StacksTestnet } from "@stacks/network";
+import { StacksMainnet } from "@stacks/network";
 import { uintCV, stringAsciiCV } from "@stacks/transactions";
 import { PostConditionMode } from "@stacks/transactions";
 
@@ -66,7 +66,7 @@ const CreateMarket = () => {
     }
     setIsSubmitting(true);
     try {
-      const network = new StacksTestnet();
+      const network = new StacksMainnet();
       const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
       const contractName = process.env.REACT_APP_CONTRACT_NAME;
       const functionName = "create-market";
