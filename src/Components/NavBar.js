@@ -4,11 +4,11 @@ import { Box, Flex, Link, Heading, Stack, Button } from "@chakra-ui/react";
 import WalletConnection from "./WalletConnection";
 import { useWallet } from "../WalletContext";
 
-const ADMIN_ADDRESS = "ST1EJ799Q4EJ511FP9C7J71ESA4920QJV7D8YKK2C";
+const ADMIN_ADDRESS = "SP1EJ799Q4EJ511FP9C7J71ESA4920QJV7CQHGA61";
 
 const Navbar = () => {
   const { userData } = useWallet();
-  const userAddress = userData?.profile?.stxAddress?.testnet;
+  const userAddress = userData?.profile?.stxAddress?.mainnet;
   const isAdmin = userAddress === ADMIN_ADDRESS;
 
   const navItems = [

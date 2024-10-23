@@ -34,7 +34,7 @@ const ProtectedAdminRoute = ({ children }) => {
 };
 const AppContent = () => {
   const { userData } = useWallet();
-  const userAddress = userData?.profile?.stxAddress?.testnet;
+  const userAddress = userData?.profile?.stxAddress?.mainnet;
 
   return (
     <Router>
