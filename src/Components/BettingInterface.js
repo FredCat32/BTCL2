@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import Comments from "./Comments";
 import {
   Box,
   VStack,
@@ -1382,6 +1383,8 @@ const BettingInterface = () => {
             </VStack>
           </CardBody>
         </Card>
+        <Divider my={4} />
+        <Comments onChainId={onChainId} />
       </VStack>
     </Box>
   );
