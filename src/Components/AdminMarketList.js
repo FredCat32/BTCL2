@@ -50,7 +50,7 @@ const AdminMarketList = () => {
   };
 
   const toggleMarketVisibility = async (marketId, currentVisibility) => {
-    const url = `${API_URL}/api/markets/${marketId}`;
+    const url = `${API_URL}/api/markets/${marketId}/toggleVisibility`; // NEW URL
     console.log("Sending PATCH request to:", url);
     try {
       await axios.patch(url, {

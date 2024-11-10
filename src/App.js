@@ -12,8 +12,11 @@ import Navbar from "./Components/NavBar";
 import CryptoMarquee from "./Components/CryptoMarquee";
 import MarketList from "./Components/MarketList";
 import BettingInterface from "./Components/BettingInterface";
+import PariMutualInterface from "./Components/PariMutualInterface";
 import CreateMarket from "./Components/CreateMarket";
+import CreateParimutuelMarket from "./Components/CreatePariMarket";
 import AdminMarketList from "./Components/AdminMarketList";
+import ParimutelAdminMarketList from "./Components/ParimutelAdminMarketList";
 import theme from "./theme";
 
 // Admin check function
@@ -51,16 +54,26 @@ const AppContent = () => {
         <Box width="100%" px={4} py={8}>
           <Routes>
             <Route path="/" element={<MarketList />} />
+            <Route path="/bet/:id/:outcome" element={<BettingInterface />} />
             <Route
-              path="/bet/:marketId/:option"
-              element={<BettingInterface />}
+              path="/parimutual/:id/:outcome"
+              element={<PariMutualInterface />}
             />
             <Route path="/create" element={<CreateMarket />} />
+            <Route path="/paricreate" element={<CreateParimutuelMarket />} />
             <Route
               path="/admin/markets"
               element={
                 <ProtectedAdminRoute>
                   <AdminMarketList />
+                </ProtectedAdminRoute>
+              }
+            />
+            <Route
+              path="/admin/parimarkets"
+              element={
+                <ProtectedAdminRoute>
+                  <ParimutelAdminMarketList />
                 </ProtectedAdminRoute>
               }
             />
