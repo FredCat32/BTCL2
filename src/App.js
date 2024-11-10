@@ -1,5 +1,15 @@
 import React from "react";
-import { ChakraProvider, Box, Container } from "@chakra-ui/react";
+import {
+  ChakraProvider,
+  Box,
+  Container,
+  Flex,
+  Stack,
+  Link,
+  Text,
+  IconButton,
+} from "@chakra-ui/react";
+import { FaTwitter, FaDiscord, FaGithub, FaTelegram } from "react-icons/fa";
 import {
   BrowserRouter as Router,
   Routes,
@@ -12,17 +22,72 @@ import Navbar from "./Components/NavBar";
 import CryptoMarquee from "./Components/CryptoMarquee";
 import MarketList from "./Components/MarketList";
 import BettingInterface from "./Components/BettingInterface";
-import PariMutualInterface from "./Components/PariMutualInterface";
 import CreateMarket from "./Components/CreateMarket";
-import CreateParimutuelMarket from "./Components/CreatePariMarket";
 import AdminMarketList from "./Components/AdminMarketList";
-import ParimutelAdminMarketList from "./Components/ParimutelAdminMarketList";
 import theme from "./theme";
 
 // Admin check function
 export const isAdmin = (userAddress) => {
-  const adminAddresses = ["SP1EJ799Q4EJ511FP9C7J71ESA4920QJV7CQHGA61"]; // Your admin address
+  const adminAddresses = ["SP1EJ799Q4EJ511FP9C7J71ESA4920QJV7CQHGA61"];
   return adminAddresses.includes(userAddress);
+};
+
+const Footer = () => {
+  return (
+    <Box
+      bg="rgba(0,0,0,0.8)"
+      backdropFilter="blur(10px)"
+      color="white"
+      py={8}
+      borderTop="1px"
+      borderColor="whiteAlpha.200"
+    >
+      <Container maxW="container.xl">
+        <Flex
+          direction={{ base: "column", md: "row" }}
+          justify="space-between"
+          align="center"
+          gap={6}
+        >
+          <Stack direction="row" spacing={6}>
+            <IconButton
+              as={Link}
+              href="https://x.com/StxBets"
+              target="_blank"
+              aria-label="BsTwitterX"
+              icon={<FaTwitter size="20px" />}
+              variant="ghost"
+              color="white"
+              _hover={{
+                bg: "whiteAlpha.200",
+                transform: "translateY(-2px)",
+                color: "cyan.300",
+              }}
+              transition="all 0.2s"
+            />
+            <IconButton
+              as={Link}
+              href="https://discord.gg/A3CEEca86d"
+              target="_blank"
+              aria-label="Discord"
+              icon={<FaDiscord size="20px" />}
+              variant="ghost"
+              color="white"
+              _hover={{
+                bg: "whiteAlpha.200",
+                transform: "translateY(-2px)",
+                color: "cyan.300",
+              }}
+              transition="all 0.2s"
+            />
+          </Stack>
+          <Text fontSize="sm" color="whiteAlpha.800">
+            © 2024 Bitcoin Prediction. All rights reserved.
+          </Text>
+        </Flex>
+      </Container>
+    </Box>
+  );
 };
 
 const ProtectedAdminRoute = ({ children }) => {
@@ -35,6 +100,7 @@ const ProtectedAdminRoute = ({ children }) => {
 
   return children;
 };
+
 const AppContent = () => {
   const { userData } = useWallet();
   const userAddress = userData?.profile?.stxAddress?.mainnet;
@@ -48,19 +114,19 @@ const AppContent = () => {
         backgroundSize="cover"
         backgroundPosition="center"
         backgroundAttachment="fixed"
+        display="flex"
+        flexDirection="column"
       >
         <CryptoMarquee />
         <Navbar userAddress={userAddress} />
-        <Box width="100%" px={4} py={8}>
+        <Box width="100%" px={4} py={8} flex="1">
           <Routes>
             <Route path="/" element={<MarketList />} />
-            <Route path="/bet/:id/:outcome" element={<BettingInterface />} />
             <Route
-              path="/parimutual/:id/:outcome"
-              element={<PariMutualInterface />}
+              path="/bet/:marketId/:option"
+              element={<BettingInterface />}
             />
             <Route path="/create" element={<CreateMarket />} />
-            <Route path="/paricreate" element={<CreateParimutuelMarket />} />
             <Route
               path="/admin/markets"
               element={
@@ -69,16 +135,9 @@ const AppContent = () => {
                 </ProtectedAdminRoute>
               }
             />
-            <Route
-              path="/admin/parimarkets"
-              element={
-                <ProtectedAdminRoute>
-                  <ParimutelAdminMarketList />
-                </ProtectedAdminRoute>
-              }
-            />
           </Routes>
         </Box>
+        <Footer />
       </Box>
     </Router>
   );

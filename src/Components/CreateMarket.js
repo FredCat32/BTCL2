@@ -73,7 +73,7 @@ const CreateMarket = () => {
       const functionArgs = [
         uintCV(initialLiquidity * 1000000), // Convert STX to µSTX
         uintCV(yesPercentage), // Direct percentage (1-99)
-        uintCV(feePercentage * 100), // Convert percentage to basis points (0-1000)
+        uintCV(feePercentage * 10), // Convert percentage to basis points (0-1000)
         stringAsciiCV(question),
       ];
 
