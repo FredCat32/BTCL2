@@ -147,7 +147,7 @@ function App() {
   const appConfig = {
     appName: "Bitcoin Prediction",
     appIconUrl: "/your-app-icon.png",
-    network: "testnet",
+    network: "mainnet",
   };
 
   return (

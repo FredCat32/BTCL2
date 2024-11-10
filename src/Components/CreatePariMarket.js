@@ -19,7 +19,7 @@ import {
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useConnect } from "@stacks/connect-react";
-import { StacksTestnet } from "@stacks/network";
+import { StacksMainnet, StacksTestnet } from "@stacks/network";
 import { uintCV, stringAsciiCV, listCV } from "@stacks/transactions";
 import { PostConditionMode } from "@stacks/transactions";
 
@@ -97,7 +97,7 @@ const CreateParimutuelMarket = () => {
 
     setIsSubmitting(true);
     try {
-      const network = new StacksTestnet();
+      const network = new StacksMainnet();
       const contractAddress = process.env.REACT_APP_TESTCONTRACT_ADDRESS;
       const contractName = process.env.REACT_APP_PARICONTRACT_NAME;
 
