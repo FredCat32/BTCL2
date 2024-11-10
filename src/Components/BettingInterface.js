@@ -475,6 +475,7 @@ const BettingInterface = () => {
         "Success",
         "Successfully bought Yes tokens"
       );
+      await updatePoints(userAddress, transactionAmount, onChainId, "buy_yes");
     } catch (error) {
       //   console.error("Error calling contract:", error);
       showTransactionToast("Buy Yes", "Error", error.message);
@@ -692,6 +693,7 @@ const BettingInterface = () => {
         "Success",
         "Successfully sold Yes tokens"
       );
+      await updatePoints(userAddress, -transactionAmount, onChainId, "sell_no");
     } catch (error) {
       console.error("Error calling contract:", error);
       showTransactionToast("Sell Yes", "Error", error.message);
@@ -773,6 +775,7 @@ const BettingInterface = () => {
     try {
       await doContractCall(options);
       showTransactionToast("Sell No", "Success", "Successfully sold No tokens");
+      await updatePoints(userAddress, -transactionAmount, onChainId, "sell_no");
     } catch (error) {
       //    console.error("Error calling contract:", error);
       showTransactionToast("Sell No", "Error", error.message);
@@ -864,10 +867,28 @@ const BettingInterface = () => {
         "Success",
         "Successfully bought No tokens"
       );
+      await updatePoints(userAddress, transactionAmount, onChainId, "buy_no");
     } catch (error) {
       //   console.error("Error calling contract:", error);
       setError(error.message);
       showTransactionToast("Buy No", "Error", error.message);
+    }
+  };
+
+  const updatePoints = async (walletAddress, points, marketId, action) => {
+    try {
+      const endpoint = points > 0 ? "add" : "deduct";
+      const absPoints = Math.abs(points);
+
+      await axios.post(`${API_URL}/api/points/${endpoint}`, {
+        walletAddress,
+        points: absPoints,
+        marketId,
+        reason: action,
+      });
+    } catch (error) {
+      console.error("Error updating points:", error);
+      // Don't show error to user since points are secondary to main functionality
     }
   };
 

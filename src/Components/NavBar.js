@@ -15,6 +15,7 @@ import {
   DrawerCloseButton,
   useDisclosure,
   IconButton,
+  Image,
   VStack,
 } from "@chakra-ui/react";
 import { HamburgerIcon } from "@chakra-ui/icons";
@@ -65,16 +66,20 @@ const Navbar = () => {
           size="lg"
         />
 
-        <Heading
-          as="h1"
-          size="lg"
-          letterSpacing={"wider"}
-          color="white"
-          textShadow="0 0 10px rgba(255,255,255,0.5)"
-          mr={8}
-        >
-          Bitcoin Prediction
-        </Heading>
+        {/* Logo and Title */}
+        <Flex align="center">
+          <Image src="/logo.png" alt="Logo" h="80px" w="auto" mr={3} />
+          <Heading
+            as="h1"
+            size="lg"
+            letterSpacing={"wider"}
+            color="white"
+            textShadow="0 0 10px rgba(255,255,255,0.5)"
+            mr={8}
+          >
+            Bitcoin Prediction
+          </Heading>
+        </Flex>
 
         {/* Desktop Navigation */}
         <Stack
