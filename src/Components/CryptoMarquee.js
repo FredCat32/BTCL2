@@ -17,7 +17,7 @@ const CryptoMarquee = () => {
         const response = await axios.get(
           "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,welsh-corgi-coin,solana,blockstack&vs_currencies=usd"
         );
-        console.log(response);
+        // console.log(response);
         const formattedPrices = [
           { name: "Bitcoin", symbol: "BTC", price: response.data.bitcoin.usd },
           {
@@ -36,7 +36,7 @@ const CryptoMarquee = () => {
         setPrices(formattedPrices);
         setIsLoading(false);
       } catch (error) {
-        console.error("Error fetching crypto prices:", error);
+        // console.error("Error fetching crypto prices:", error);
         setIsLoading(false);
       }
     };

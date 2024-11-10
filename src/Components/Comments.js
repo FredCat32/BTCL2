@@ -56,7 +56,7 @@ const SORT_OPTIONS = {
 };
 
 const Comments = ({ onChainId }) => {
-  console.log("Comments component received onChainId:", onChainId);
+  //console.log("Comments component received onChainId:", onChainId);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -79,12 +79,12 @@ const Comments = ({ onChainId }) => {
 
   const fetchComments = async (page = 1, sort = sortBy) => {
     setIsLoading(true);
-    console.log("Fetching comments with params:", {
-      onChainId,
-      page,
-      limit: COMMENTS_PER_PAGE,
-      sort,
-    });
+    // console.log("Fetching comments with params:", {
+    //   onChainId,
+    //   page,
+    //   limit: COMMENTS_PER_PAGE,
+    //   sort,
+    // });
 
     try {
       const url = `${API_URL}/api/comments`;
@@ -98,7 +98,7 @@ const Comments = ({ onChainId }) => {
         },
       });
 
-      console.log("Response from server:", response.data);
+      //console.log("Response from server:", response.data);
 
       const fetchedComments = response.data.comments || [];
       setComments(fetchedComments);
@@ -106,8 +106,8 @@ const Comments = ({ onChainId }) => {
       const totalComments = response.data.total || 0;
       setTotalPages(Math.ceil(totalComments / COMMENTS_PER_PAGE));
     } catch (error) {
-      console.error("Error fetching comments:", error);
-      console.log("Attempted URL:", error.config?.url);
+      //  console.error("Error fetching comments:", error);
+      //  console.log("Attempted URL:", error.config?.url);
       toast({
         title: "Error fetching comments",
         description: error.message,

@@ -18,7 +18,9 @@ const Navbar = () => {
 
   if (isAdmin) {
     navItems.push({ name: "Admin", path: "/admin/markets" });
+    navItems.push({ name: "Pari Admin", path: "/admin/parimarkets" });
     navItems.push({ name: "Create Market", path: "/create" });
+    navItems.push({ name: "Create Pari Market", path: "/paricreate" });
   }
 
   return (
