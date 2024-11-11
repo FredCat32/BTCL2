@@ -14,6 +14,7 @@ const Navbar = () => {
   const navItems = [
     { name: "Home", path: "/" },
     { name: "Stats", path: "/stats" },
+    { name: "Socials", path: "/socials" },
   ];
 
   if (isAdmin) {
