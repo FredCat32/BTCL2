@@ -19,7 +19,9 @@ import {
 import { Connect } from "@stacks/connect-react";
 import { WalletProvider, useWallet } from "./WalletContext";
 import Navbar from "./Components/NavBar";
+import LegalWarningModal from "./Components/LegalWarningModal";
 import CryptoMarquee from "./Components/CryptoMarquee";
+import Leaderboard from "./Components/Leaderboard";
 import MarketList from "./Components/MarketList";
 import BettingInterface from "./Components/BettingInterface";
 import CreateMarket from "./Components/CreateMarket";
@@ -122,6 +124,7 @@ const AppContent = () => {
         <Box width="100%" px={4} py={8} flex="1">
           <Routes>
             <Route path="/" element={<MarketList />} />
+            <Route path="/Leaderboard" element={<Leaderboard />} />
             <Route
               path="/bet/:marketId/:option"
               element={<BettingInterface />}
@@ -154,6 +157,7 @@ function App() {
     <ChakraProvider theme={theme}>
       <Connect authOptions={appConfig}>
         <WalletProvider>
+          <LegalWarningModal />
           <AppContent />
         </WalletProvider>
       </Connect>
