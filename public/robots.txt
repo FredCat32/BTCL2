@@ -1,3 +1,11 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Disallow:
+   <ListItem>
+              This platform is not intended for use by residents or citizens of
+              the United States or citizen/agents of Iran, Cuba, North Korea,
+              Syria, Myanmar, Sudan, Liberia, Russia or the regions of Crimea,
+              Donetsk or Luhansk and that you are not accessing the interface
+              from within the United States or any of the mentioned countries
+              and territories.
+            </ListItem>

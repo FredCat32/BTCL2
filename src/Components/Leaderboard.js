@@ -30,36 +30,44 @@ const Leaderboard = () => {
   const API_URL = process.env.REACT_APP_API_URL;
 
   const bgColor = useColorModeValue("white", "gray.800");
+  const highlightColor = useColorModeValue("blue.50", "blue.900");
+  const hoverColor = useColorModeValue("gray.50", "gray.700");
 
   useEffect(() => {
     fetchLeaderboard();
   }, []);
 
+  // Frontend: Update the fetchLeaderboard function in your Leaderboard.js
   const fetchLeaderboard = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching leaderboard data...");
       const response = await axios.get(`${API_URL}/api/points/leaderboard`);
-      console.log("Leaderboard response:", response.data);
+      console.log("Raw leaderboard response:", response.data);
 
-      // If we get a single user's data, convert it to an array with that user
-      if (response.data && typeof response.data.totalPoints !== "undefined") {
-        setLeaderboardData([
-          {
-            walletAddress: userAddress,
-            totalPoints: response.data.totalPoints,
-            transactionHistory: response.data.transactionHistory,
-          },
-        ]);
-      } else if (Array.isArray(response.data)) {
-        setLeaderboardData(response.data);
-      } else {
-        setLeaderboardData([]); // Empty array if no valid data
+      // Convert single object response to array if needed
+      let leaderboardData = response.data;
+      if (!Array.isArray(leaderboardData)) {
+        if (leaderboardData.totalPoints !== undefined) {
+          // If it's a single user object, convert to array
+          leaderboardData = [leaderboardData];
+        } else {
+          // If it's invalid data, use empty array
+          leaderboardData = [];
+        }
       }
 
-      setError(null);
+      // Filter out any invalid entries
+      const validData = leaderboardData.filter(
+        (entry) =>
+          entry && entry.walletAddress && typeof entry.totalPoints === "number"
+      );
+
+      console.log("Processed leaderboard data:", validData);
+      setLeaderboardData(validData);
     } catch (err) {
       console.error("Error fetching leaderboard:", err);
-      setLeaderboardData([]); // Initialize empty array on error
+      setLeaderboardData([]); // Set empty array on error
       setError("Failed to load leaderboard data");
     } finally {
       setIsLoading(false);
@@ -78,11 +86,29 @@ const Leaderboard = () => {
     return <Badge colorScheme="blue">{rank + 1}th</Badge>;
   };
 
+  const getLastActivity = (entry) => {
+    if (entry.lastUpdated) {
+      return new Date(entry.lastUpdated).toLocaleDateString();
+    }
+    if (entry.transactionHistory?.[0]?.date) {
+      return new Date(entry.transactionHistory[0].date).toLocaleDateString();
+    }
+    return "No recent activity";
+  };
+
   if (isLoading) {
     return (
       <Box textAlign="center" py={10}>
         <Spinner size="xl" />
         <Text mt={4}>Loading leaderboard...</Text>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box textAlign="center" py={10}>
+        <Text color="red.500">{error}</Text>
       </Box>
     );
   }
@@ -118,13 +144,13 @@ const Leaderboard = () => {
               <Tbody>
                 {leaderboardData.map((entry, index) => (
                   <Tr
-                    key={entry.walletAddress || index}
+                    key={entry.walletAddress}
                     bg={
                       entry.walletAddress === userAddress
-                        ? "blue.50"
+                        ? highlightColor
                         : "inherit"
                     }
-                    _hover={{ bg: "gray.50" }}
+                    _hover={{ bg: hoverColor }}
                   >
                     <Td>
                       <HStack spacing={2}>{getRankBadge(index)}</HStack>
@@ -143,23 +169,13 @@ const Leaderboard = () => {
                     </Td>
                     <Td isNumeric>
                       <Text fontWeight="bold">
-                        {entry.totalPoints.toLocaleString()}
+                        {Math.abs(entry.totalPoints).toLocaleString()}
                       </Text>
                     </Td>
                     <Td>
-                      {entry.transactionHistory &&
-                      entry.transactionHistory.length > 0 ? (
-                        <Text fontSize="sm" color="gray.600">
-                          Last activity:{" "}
-                          {new Date(
-                            entry.transactionHistory[0].date
-                          ).toLocaleDateString()}
-                        </Text>
-                      ) : (
-                        <Text fontSize="sm" color="gray.400">
-                          No recent activity
-                        </Text>
-                      )}
+                      <Text fontSize="sm" color="gray.600">
+                        {getLastActivity(entry)}
+                      </Text>
                     </Td>
                   </Tr>
                 ))}
