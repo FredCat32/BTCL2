@@ -45,6 +45,7 @@ const AppContent = () => {
       <Box
         minHeight="100vh"
         width="100%"
+        height="100%"
         backgroundImage="url('/background.jpg')"
         backgroundSize="cover"
         backgroundPosition="center"
