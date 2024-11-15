@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Box, Text, HStack, keyframes } from "@chakra-ui/react";
+import { Box, Text, HStack } from "@chakra-ui/react";
+import { keyframes } from "@emotion/react";
 import axios from "axios";
 
 const scroll = keyframes`

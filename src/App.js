@@ -17,6 +17,7 @@ import CreateMarket from "./Components/CreateMarket";
 import CreateParimutuelMarket from "./Components/CreatePariMarket";
 import AdminMarketList from "./Components/AdminMarketList";
 import ParimutelAdminMarketList from "./Components/ParimutelAdminMarketList";
+import SocialsPage from "./Components/SocialsPage";
 import theme from "./theme";
 
 // Admin check function
@@ -44,6 +45,7 @@ const AppContent = () => {
       <Box
         minHeight="100vh"
         width="100%"
+        height="100%"
         backgroundImage="url('/background.jpg')"
         backgroundSize="cover"
         backgroundPosition="center"
@@ -77,6 +79,7 @@ const AppContent = () => {
                 </ProtectedAdminRoute>
               }
             />
+            <Route path="/socials" element={<SocialsPage />} />
           </Routes>
         </Box>
       </Box>
