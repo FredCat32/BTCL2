@@ -1193,14 +1193,16 @@ const BettingInterface = () => {
   return (
     <Box maxWidth="600px" margin="auto" p={6}>
       <VStack spacing={6} align="stretch">
-        <CardHeader>
-          <Heading size="md">
-            {market?.question || "Betting Market Interface"}
-          </Heading>
-          {priceHistoryData.length > 0 && (
-            <PriceHistoryChart data={priceHistoryData} />
-          )}
-        </CardHeader>
+        <Card>
+          <CardHeader>
+            <Heading size="md">
+              {market?.question || "Betting Market Interface"}
+            </Heading>
+            {priceHistoryData.length > 0 && (
+              <PriceHistoryChart data={priceHistoryData} />
+            )}
+          </CardHeader>
+        </Card>
         <Card bg="rgba(255, 255, 255, 0.8)" backdropFilter="blur(10px)">
           <CardHeader>
             <Heading size="md">
