@@ -23,6 +23,7 @@ import LegalWarningModal from "./Components/LegalWarningModal";
 import CryptoMarquee from "./Components/CryptoMarquee";
 import Leaderboard from "./Components/Leaderboard";
 import MarketList from "./Components/MarketList";
+import SocialsPage from "./Components/SocialsPage";
 import BettingInterface from "./Components/BettingInterface";
 import CreateMarket from "./Components/CreateMarket";
 import AdminMarketList from "./Components/AdminMarketList";
@@ -112,6 +113,7 @@ const AppContent = () => {
       <Box
         minHeight="100vh"
         width="100%"
+        height="100%"
         backgroundImage="url('/background.jpg')"
         backgroundSize="cover"
         backgroundPosition="center"
@@ -125,6 +127,7 @@ const AppContent = () => {
           <Routes>
             <Route path="/" element={<MarketList />} />
             <Route path="/Leaderboard" element={<Leaderboard />} />
+            <Route path="/socialspage" element={<SocialsPage />} />
             <Route
               path="/bet/:marketId/:option"
               element={<BettingInterface />}

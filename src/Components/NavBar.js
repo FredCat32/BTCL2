@@ -34,6 +34,7 @@ const Navbar = () => {
     { name: "Home", path: "/" },
     { name: "Stats", path: "/stats" },
     { name: "Leaderboard", path: "/Leaderboard" },
+    { name: "Socials", path: "/SocialsPage" },
   ];
 
   if (isAdmin) {
