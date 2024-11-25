@@ -63,7 +63,7 @@ const Leaderboard = () => {
           entry && entry.walletAddress && typeof entry.totalPoints === "number"
       );
 
-      console.log("Processed leaderboard data:", validData);
+      console.log("Processsed leaderboard data:", validData);
       setLeaderboardData(validData);
     } catch (err) {
       console.error("Error fetching leaderboard:", err);

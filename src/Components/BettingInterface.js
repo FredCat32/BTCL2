@@ -397,6 +397,24 @@ const BettingInterface = () => {
       showTransactionToast("Claim LP Winnings", "Error", error.message);
     }
   };
+  const calculatePoints = (transactionAmount, action) => {
+    // Convert STX amount to points using a standardized ratio
+    const basePoints = parseFloat(transactionAmount);
+
+    // Action multipliers for different activities
+    const multipliers = {
+      buy_yes: 1.0,
+      buy_no: 1.0,
+      sell_yes: 0.5,
+      sell_no: 0.5,
+      provide_liquidity: 2.0, // Double points for providing liquidity
+      remove_liquidity: -2.0, // Lose full amount of bonus points when removing
+    };
+
+    // Calculate base points with multiplier, then multiply by 1000 for bigger numbers
+    return Math.floor(basePoints * (multipliers[action] || 1.0) * 1000);
+  };
+
   const calculateSlippage = (inputAmount, inputPool, outputPool) => {
     // Ensure all inputs are numbers
     const input = Number(inputAmount);
@@ -521,10 +539,10 @@ const BettingInterface = () => {
 
   const handleAddLiquidity = async () => {
     if (!userData || !userData.profile) {
-      //   console.error("User not connected");
       setError("Please connect your wallet first");
       return;
     }
+
     showTransactionToast("Add Liquidity", "Pending", "Transaction submitted");
 
     const userAddress = userData.profile.stxAddress.mainnet;
@@ -535,7 +553,7 @@ const BettingInterface = () => {
     // Add a buffer for potential additional costs
     const bufferAmount = microStxAmount; // 100% buffer
     const totalAmountWithBuffer = microStxAmount + bufferAmount;
-    //push
+
     const functionArgs = [
       uintCV(onChainId), // market-id
       uintCV(microStxAmount), // stx-amount in microSTX
@@ -545,7 +563,7 @@ const BettingInterface = () => {
     const postCondition = Pc.principal(userAddress)
       .willSendLte(totalAmountWithBuffer)
       .ustx();
-    //push
+
     const options = {
       contractAddress,
       contractName,
@@ -554,24 +572,46 @@ const BettingInterface = () => {
       network: new StacksMainnet(),
       postConditions: [postCondition],
       postConditionMode: PostConditionMode.Deny,
-      onFinish: (data) => {
-        //  console.log("Transaction submitted:", data);
-        // Optionally refresh market details and user position here
-        fetchMarketDetails();
-        fetchUserPosition();
+      onFinish: async (data) => {
+        try {
+          // Award points for providing liquidity
+          await updatePoints(
+            userAddress,
+            liquidityAmount, // Using original STX amount
+            onChainId,
+            "provide_liquidity"
+          );
+
+          // Refresh market details and user position
+          await fetchMarketDetails();
+          await fetchUserPosition();
+
+          showTransactionToast(
+            "Add Liquidity",
+            "Success",
+            "Liquidity added successfully and points awarded"
+          );
+        } catch (error) {
+          console.error("Error in post-transaction processing:", error);
+          // Still show success for the main transaction
+          showTransactionToast(
+            "Add Liquidity",
+            "Success",
+            "Liquidity added successfully (points update pending)"
+          );
+        }
       },
       onCancel: () => {
-        // console.log("Transaction canceled");
+        showTransactionToast(
+          "Add Liquidity",
+          "Cancelled",
+          "Transaction was cancelled"
+        );
       },
     };
 
     try {
       await doContractCall(options);
-      showTransactionToast(
-        "Add Liquidity",
-        "Success",
-        "Liquidity added successfully"
-      );
     } catch (error) {
       console.error("Error calling contract:", error);
       showTransactionToast("Add Liquidity", "Error", error.message);
@@ -594,6 +634,7 @@ const BettingInterface = () => {
       setError("Please connect your wallet first");
       return;
     }
+
     showTransactionToast(
       "Remove Liquidity",
       "Pending",
@@ -607,6 +648,10 @@ const BettingInterface = () => {
       ((userLiquidity * removeLiquidityPercentage) / 100) * 1000000
     );
 
+    // Calculate the STX equivalent for points deduction
+    // userLiquidity is in STX, and removeLiquidityPercentage is the percentage being removed
+    const stxAmountRemoved = (userLiquidity * removeLiquidityPercentage) / 100;
+
     const functionArgs = [
       uintCV(onChainId), // market-id
       uintCV(lpTokensToRemove), // lp-tokens-to-remove in micro units
@@ -619,24 +664,48 @@ const BettingInterface = () => {
       functionArgs,
       network: new StacksMainnet(),
       postConditionMode: PostConditionMode.Allow,
-      onFinish: (data) => {
-        console.log("Transaction submitted:", data);
-        fetchMarketDetails();
-        fetchUserPosition();
-        fetchUserLiquidity(); // Make sure to fetch updated liquidity
+      onFinish: async (data) => {
+        try {
+          // Deduct points proportional to liquidity removed
+          await updatePoints(
+            userAddress,
+            formatNumber(stxAmountRemoved), // Format the STX amount being removed
+            onChainId,
+            "remove_liquidity"
+          );
+
+          await Promise.all([
+            fetchMarketDetails(),
+            fetchUserPosition(),
+            fetchUserLiquidity(),
+          ]);
+
+          showTransactionToast(
+            "Remove Liquidity",
+            "Success",
+            "Liquidity removed successfully and points adjusted"
+          );
+        } catch (error) {
+          console.error("Error in post-transaction processing:", error);
+          showTransactionToast(
+            "Remove Liquidity",
+            "Success",
+            "Liquidity removed successfully (points update pending)"
+          );
+        }
       },
       onCancel: () => {
         console.log("Transaction canceled");
+        showTransactionToast(
+          "Remove Liquidity",
+          "Cancelled",
+          "Transaction cancelled"
+        );
       },
     };
 
     try {
       await doContractCall(options);
-      showTransactionToast(
-        "Remove Liquidity",
-        "Success",
-        "Liquidity removed successfully"
-      );
     } catch (error) {
       console.error("Error calling contract:", error);
       setError(error.message);
@@ -916,20 +985,62 @@ const BettingInterface = () => {
     }
   };
 
-  const updatePoints = async (walletAddress, points, marketId, action) => {
-    try {
-      const endpoint = points > 0 ? "add" : "deduct";
-      const absPoints = Math.abs(points);
+  const updatePoints = async (
+    walletAddress,
+    transactionAmount,
+    marketId,
+    action
+  ) => {
+    if (!walletAddress || !transactionAmount || !marketId || !action) {
+      console.error("Missing required parameters for points update");
+      return;
+    }
 
-      await axios.post(`${API_URL}/api/points/${endpoint}`, {
-        walletAddress,
-        points: absPoints,
-        marketId,
-        reason: action,
-      });
-    } catch (error) {
-      console.error("Error updating points:", error);
-      // Don't show error to user since points are secondary to main functionality
+    const points = calculatePoints(transactionAmount, action);
+
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    while (retryCount < maxRetries) {
+      try {
+        const endpoint = points > 0 ? "add" : "deduct";
+        const absPoints = Math.abs(points);
+
+        const response = await axios.post(`${API_URL}/api/points/${endpoint}`, {
+          walletAddress,
+          points: absPoints,
+          marketId,
+          reason: action,
+          metadata: {
+            originalAmount: transactionAmount,
+            timestamp: Date.now(),
+            network: "mainnet",
+            calculatedMultiplier: points / absPoints,
+            actionType: action,
+          },
+        });
+
+        console.log(`Points ${endpoint}ed successfully:`, {
+          walletAddress: walletAddress.slice(0, 8) + "...",
+          points: absPoints,
+          action,
+        });
+
+        return response.data;
+      } catch (error) {
+        retryCount++;
+        if (retryCount === maxRetries) {
+          console.error("Failed to update points after maximum retries:", {
+            error: error.message,
+            walletAddress: walletAddress.slice(0, 8) + "...",
+            attempt: retryCount,
+          });
+        } else {
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * Math.pow(2, retryCount))
+          );
+        }
+      }
     }
   };
 
