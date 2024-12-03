@@ -84,7 +84,7 @@ const BettingInterface = () => {
   const [transactionAmount, setTransactionAmount] = useState("");
   const [marketNotes, setMarketNotes] = useState("");
   const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
-  const contractName = process.env.REACT_APP_CONTRACT_NAME;
+  let contractName = process.env.REACT_APP_CONTRACT_NAME;
   const apiEndpoint = "https://stacks-node-api.mainnet.stacks.co";
   const [slippage, setSlippage] = useState(0);
   const [liquidityTokens, setLiquidityTokens] = useState(0);
@@ -143,6 +143,11 @@ const BettingInterface = () => {
       console.log("Full market details response:", response.data);
       if (response.data && response.data.notes) {
         console.log("Notes from response:", response.data.notes);
+        console.log(process.env.REACT_APP_CONTRACT_NAME);
+        console.log(typeof process.env.REACT_APP_CONTRACT_NAME);
+        contractName = response.data.contract;
+
+        console.log("new contract is" + contractName);
         setMarketNotes(response.data.notes);
       } else {
         console.log("No notes found in the response");
@@ -224,10 +229,10 @@ const BettingInterface = () => {
 
   useEffect(() => {
     if (onChainId) {
+      fetchMarketDetailsFromBackend();
       fetchMarketDetails();
       fetchUserPosition();
       fetchUserLiquidity();
-      fetchMarketDetailsFromBackend();
       fetchPriceHistory();
     }
   }, [onChainId]);
@@ -1144,7 +1149,6 @@ const BettingInterface = () => {
       console.log(response);
       // Parse the response
       if (response && response.value && response.value.data) {
-        console.log("HEREEEEEEEEEEEEEEEEEE");
         const newUserPosition = {
           no: Number(response.value.data["no-tokens"].value) / 1000000,
           yes: Number(response.value.data["yes-tokens"].value) / 1000000,
